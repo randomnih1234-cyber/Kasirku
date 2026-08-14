@@ -17,7 +17,7 @@
         <!-- Header -->
         <h1 class="text-xl font-bold text-center text-emerald-700 my-2">🛒 Cek Harga Sembako</h1>
 
-        <!-- AREA KAMERA -->
+        <!-- AREA KAMERA & TOMBOL KONTROL -->
         <div class="bg-white rounded-xl shadow p-3 mb-4">
             <div class="relative overflow-hidden rounded-lg">
                 <!-- Frame Kamera -->
@@ -34,18 +34,25 @@
                 </div>
             </div>
 
-            <!-- INDIKATOR TEKS REAL-TIME DARI KAMERA -->
+            <!-- INDIKATOR TEKS REAL-TIME DARI KAMERA & SUARA -->
             <div class="mt-2 bg-slate-100 p-2 rounded-lg border text-center">
-                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Teks Terbaca Kamera Live:</p>
+                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Status Kamera / Suara Live:</p>
                 <p id="liveTextDisplay" class="text-xs font-mono font-bold text-emerald-800 truncate mt-0.5">Kamera mati.</p>
             </div>
 
-            <div class="flex gap-2 mt-3">
-                <button onclick="startScanner()" class="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700">
+            <!-- TOMBOL KONTROL (Buka Kamera | Mic | Stop Kamera) -->
+            <div class="flex items-center gap-2 mt-3">
+                <button onclick="startScanner()" class="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700">
                     📷 Buka Kamera
                 </button>
-                <button onclick="stopScanner()" class="flex-1 bg-rose-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-rose-700">
-                    🛑 Matikan Kamera
+                
+                <!-- TOMBOL MIC MINIMALIS (IKON SAJA) -->
+                <button id="micBtn" onclick="toggleVoice()" title="Input Suara" class="bg-indigo-600 text-white p-2 rounded-lg text-base hover:bg-indigo-700 transition shrink-0 flex items-center justify-center">
+                    🎙️
+                </button>
+
+                <button onclick="stopScanner()" class="flex-1 bg-rose-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-rose-700">
+                    🛑 Stop Kamera
                 </button>
             </div>
         </div>
@@ -54,11 +61,11 @@
         <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-emerald-500">
             <div class="flex justify-between items-center mb-2 pb-2 border-b">
                 <h2 class="text-sm font-bold text-slate-800">🛍️ Daftar Belanjaan</h2>
-                <button onclick="clearCart()" class="text-xs text-rose-600 font-semibold">Kosongkan</button>
+                <button onclick="clearCart()" class="text-xs text-rose-600 font-semibold hover:underline">Kosongkan</button>
             </div>
 
-            <div id="cartList" class="space-y-2 max-h-40 overflow-y-auto mb-3 text-xs">
-                <p class="text-center text-slate-400 py-3">Arahkan kamera ke barcode atau tulisan merk barang.</p>
+            <div id="cartList" class="space-y-2 max-h-48 overflow-y-auto mb-3 text-xs">
+                <p class="text-center text-slate-400 py-3">Sebut nama barang (via mic), scan barcode, atau pilih dari etalase.</p>
             </div>
 
             <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200 flex justify-between items-center">
@@ -93,11 +100,11 @@
             </form>
         </div>
 
-        <!-- DAFTAR ETALASE BARANG (EDIT & HAPUS) -->
+        <!-- DAFTAR ETALASE BARANG -->
         <div class="bg-white rounded-xl shadow p-4">
             <h2 class="text-sm font-bold mb-3 text-slate-700">📦 Etalase Barang Saya</h2>
             <div id="etalaseList" class="space-y-2 max-h-52 overflow-y-auto text-xs">
-                <!-- Daftar barang terdaftar akan muncul di sini -->
+                <!-- Daftar barang terdaftar -->
             </div>
         </div>
     </div>
@@ -122,18 +129,17 @@
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
         }
 
-        // PEMBERSIH TEKS: Hapus enter, spasi berlebih, & perbaiki typo huruf
         function cleanAndFixText(text) {
             if (!text) return "";
             return text.toUpperCase()
-                .replace(/[\r\n]+/g, ' ')  // Ubah baris baru/enter menjadi spasi
+                .replace(/[\r\n]+/g, ' ')
                 .replace(/0/g, 'O')
                 .replace(/1/g, 'I')
                 .replace(/5/g, 'S')
                 .replace(/3/g, 'E')
                 .replace(/8/g, 'B')
-                .replace(/[^A-Z0-9\s]/g, '') // Hapus simbol aneh
-                .replace(/\s+/g, ' ')        // Ubah spasi ganda jadi spasi tunggal
+                .replace(/[^A-Z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
                 .trim();
         }
 
@@ -151,6 +157,90 @@
                 overlay.classList.add('opacity-0', 'scale-90');
                 setTimeout(() => overlay.classList.add('hidden'), 200);
             }, 700);
+        }
+
+        // --- FITUR PERINTAH SUARA (IKON MINIMALIS) ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isListening = false;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'id-ID';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                isListening = true;
+                const micBtn = document.getElementById('micBtn');
+                micBtn.className = "bg-rose-600 text-white p-2 rounded-lg text-base animate-pulse transition shrink-0 flex items-center justify-center";
+                document.getElementById('liveTextDisplay').innerText = "🎙️ Mendengarkan suara...";
+            };
+
+            recognition.onresult = (event) => {
+                const spokenText = event.results[0][0].transcript;
+                document.getElementById('liveTextDisplay').innerText = `Suara: "${spokenText}"`;
+                matchAndAddToCart(spokenText);
+            };
+
+            recognition.onerror = () => {
+                document.getElementById('liveTextDisplay').innerText = "⚠️ Suara tidak terdeteksi, coba lagi.";
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                const micBtn = document.getElementById('micBtn');
+                micBtn.className = "bg-indigo-600 text-white p-2 rounded-lg text-base hover:bg-indigo-700 transition shrink-0 flex items-center justify-center";
+            };
+        }
+
+        function toggleVoice() {
+            if (!SpeechRecognition) {
+                alert("Browser HP Anda belum mendukung perintah suara. Gunakan Google Chrome!");
+                return;
+            }
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        }
+
+        // --- PENCOCOKAN DENGAN NAMA BARANG ---
+        function matchAndAddToCart(inputText) {
+            const cleanInput = cleanAndFixText(inputText);
+            let bestMatchKey = null;
+            let maxScore = 0;
+
+            for (let key in products) {
+                const item = products[key];
+                const fullTargetText = cleanAndFixText(key + " " + item.name);
+
+                if (cleanInput.includes(fullTargetText) || fullTargetText.includes(cleanInput)) {
+                    bestMatchKey = key;
+                    break;
+                }
+
+                const targetWords = fullTargetText.split(/\s+/).filter(w => w.length >= 3);
+                let score = 0;
+
+                for (let word of targetWords) {
+                    if (cleanInput.includes(word)) score++;
+                }
+
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestMatchKey = key;
+                }
+            }
+
+            if (bestMatchKey) {
+                showGreenCheckmark(products[bestMatchKey].name);
+                triggerVibration();
+                addToCart(bestMatchKey);
+            } else {
+                alert(`Barang "${inputText}" tidak ditemukan di Etalase.`);
+            }
         }
 
         // MULAI KAMERA LIVE
@@ -188,7 +278,7 @@
             }
         }
 
-        // PEMBACA TEKS MERK LIVE + LOGIKA PENCARIAN PINTAR (KODE & NAMA BARANG)
+        // PEMBACA TEKS MERK LIVE
         async function processLiveFrameOCR() {
             if (isProcessingOcr || !ocrWorker) return;
             const videoElement = document.querySelector("#reader video");
@@ -208,46 +298,10 @@
                 const displayBox = document.getElementById('liveTextDisplay');
                 if (cleanOcr.length > 0) {
                     displayBox.innerText = cleanOcr.substring(0, 35);
+                    matchAndAddToCart(cleanOcr);
                 } else {
                     displayBox.innerText = "(Mencari tulisan...)";
                 }
-
-                let bestMatchKey = null;
-                let maxScore = 0;
-
-                // CARI DI DALAM KODE DAN NAMA BARANG
-                for (let key in products) {
-                    const item = products[key];
-                    // Gabungkan Kode + Nama Barang untuk dicocokkan!
-                    const fullTargetText = cleanAndFixText(key + " " + item.name);
-
-                    // 1. Jika teks kamera mengandung seluruh nama barang
-                    if (cleanOcr.includes(fullTargetText)) {
-                        bestMatchKey = key;
-                        break;
-                    }
-
-                    // 2. Hitung jumlah kata yang cocok (misal kata "INDOMILK" dan "KIDS")
-                    const targetWords = fullTargetText.split(/\s+/).filter(w => w.length >= 3);
-                    let score = 0;
-
-                    for (let word of targetWords) {
-                        if (cleanOcr.includes(word)) {
-                            score++;
-                        }
-                    }
-
-                    if (score > maxScore) {
-                        maxScore = score;
-                        bestMatchKey = key;
-                    }
-                }
-
-                // Jika ditemukan kata yang cocok, angkat barangnya ke keranjang!
-                if (bestMatchKey && maxScore > 0) {
-                    handleDetectedKey(bestMatchKey);
-                }
-
             } catch (e) {
                 console.error("OCR Error:", e);
             } finally {
@@ -255,7 +309,6 @@
             }
         }
 
-        // SAAT TERDETEKSI
         function handleDetectedKey(key) {
             const now = Date.now();
             if (key === lastScannedKey && (now - lastScanTime) < 2000) return;
@@ -270,7 +323,7 @@
             }
         }
 
-        // SISTEM KERANJANG
+        // KERANJANG BELANJA
         function addToCart(key) {
             if (!products[key]) return;
             if (cart[key]) {
@@ -281,31 +334,19 @@
             renderCart();
         }
 
-        function renderCart() {
-            const cartList = document.getElementById('cartList');
-            const keys = Object.keys(cart);
-            cartList.innerHTML = '';
-
-            let grandTotal = 0;
-            if (keys.length === 0) {
-                cartList.innerHTML = `<p class="text-center text-slate-400 py-3">Arahkan kamera ke barcode atau tulisan merk barang.</p>`;
-            } else {
-                keys.forEach(key => {
-                    const item = cart[key];
-                    const subtotal = item.price * item.qty;
-                    grandTotal += subtotal;
-                    cartList.innerHTML += `
-                        <div class="flex justify-between items-center p-2 bg-slate-50 rounded border">
-                            <div>
-                                <p class="font-bold text-slate-800">${item.name}</p>
-                                <p class="text-[11px] text-slate-500">${formatRupiah(item.price)} x ${item.qty}</p>
-                            </div>
-                            <span class="font-bold text-emerald-700">${formatRupiah(subtotal)}</span>
-                        </div>
-                    `;
-                });
+        function updateQty(key, change) {
+            if (cart[key]) {
+                cart[key].qty += change;
+                if (cart[key].qty <= 0) {
+                    delete cart[key];
+                }
+                renderCart();
             }
-            document.getElementById('grandTotal').innerText = formatRupiah(grandTotal);
+        }
+
+        function removeFromCart(key) {
+            delete cart[key];
+            renderCart();
         }
 
         function clearCart() {
@@ -313,7 +354,39 @@
             renderCart();
         }
 
-        // SIMPAN / UPDATE BARANG
+        function renderCart() {
+            const cartList = document.getElementById('cartList');
+            const keys = Object.keys(cart);
+            cartList.innerHTML = '';
+
+            let grandTotal = 0;
+            if (keys.length === 0) {
+                cartList.innerHTML = `<p class="text-center text-slate-400 py-3">Sebut nama barang (via mic), scan barcode, atau pilih dari etalase.</p>`;
+            } else {
+                keys.forEach(key => {
+                    const item = cart[key];
+                    const subtotal = item.price * item.qty;
+                    grandTotal += subtotal;
+                    cartList.innerHTML += `
+                        <div class="flex justify-between items-center p-2 bg-slate-50 rounded border">
+                            <div class="flex-1 pr-2">
+                                <p class="font-bold text-slate-800">${item.name}</p>
+                                <p class="text-[11px] text-slate-500">${formatRupiah(item.price)} x ${item.qty} = <span class="font-semibold text-emerald-700">${formatRupiah(subtotal)}</span></p>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button onclick="updateQty('${key}', -1)" class="w-6 h-6 bg-slate-200 text-slate-700 font-bold rounded text-xs hover:bg-slate-300">-</button>
+                                <span class="w-6 text-center font-bold text-xs">${item.qty}</span>
+                                <button onclick="updateQty('${key}', 1)" class="w-6 h-6 bg-slate-200 text-slate-700 font-bold rounded text-xs hover:bg-slate-300">+</button>
+                                <button onclick="removeFromCart('${key}')" title="Hapus Barang" class="ml-1 text-rose-500 hover:text-rose-700 font-bold text-xs p-1">❌</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('grandTotal').innerText = formatRupiah(grandTotal);
+        }
+
+        // SIMPAN / UPDATE BARANG MASTER
         function saveProduct(e) {
             e.preventDefault();
             const key = document.getElementById('barcodeInput').value.trim().toUpperCase();
@@ -359,7 +432,7 @@
             document.getElementById('cancelEditBtn').classList.add('hidden');
         }
 
-        // HAPUS BARANG
+        // HAPUS BARANG DARI ETALASE
         function deleteProduct(key) {
             if (confirm(`Hapus "${products[key].name}" dari etalase?`)) {
                 delete products[key];
