@@ -70,7 +70,7 @@
             </div>
         </div>
 
-        <!-- KERANJANG BELANJA & TOTAL HARGA -->
+        <!-- KERANJANG BELANJA & KALKULATOR KEMBALIAN -->
         <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-emerald-500">
             <div class="flex justify-between items-center mb-2 pb-2 border-b">
                 <h2 class="text-sm font-bold text-slate-800">🛍️ Daftar Belanjaan</h2>
@@ -81,9 +81,34 @@
                 <p class="text-center text-slate-400 py-3">Scan camera, sebut nama (mic), atau ketik di pencarian manual.</p>
             </div>
 
-            <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200 flex justify-between items-center">
-                <span class="text-xs font-bold text-slate-700">Total Harga:</span>
-                <span id="grandTotal" class="text-base font-extrabold text-emerald-700">Rp 0</span>
+            <!-- RINGKASAN TOTAL & KALKULATOR KEMBALIAN -->
+            <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-700">Total Harga:</span>
+                    <span id="grandTotal" class="text-base font-extrabold text-emerald-700">Rp 0</span>
+                </div>
+
+                <hr class="border-emerald-200 border-dashed">
+
+                <div class="grid grid-cols-2 gap-2 items-center text-xs">
+                    <div>
+                        <label class="block font-medium text-slate-600">Uang Dibayar (Rp):</label>
+                        <input type="text" id="paidInput" oninput="calculateChange()" placeholder="Contoh: 10 (10rb)" class="w-full mt-1 p-1.5 border rounded font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-emerald-500 bg-white">
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-slate-500 font-medium">Kembalian:</span>
+                        <span id="changeOutput" class="text-sm font-bold text-slate-800">Rp 0</span>
+                    </div>
+                </div>
+
+                <!-- TOMBOL CEPAT PECAHAN UANG -->
+                <div class="flex gap-1 pt-1 overflow-x-auto">
+                    <button type="button" onclick="setPaidAmount('exact')" class="px-2 py-1 bg-white border border-emerald-300 rounded text-[10px] font-semibold text-emerald-800 hover:bg-emerald-100 shrink-0">Uang Pas</button>
+                    <button type="button" onclick="setPaidAmount(10)" class="px-2 py-1 bg-white border border-emerald-300 rounded text-[10px] font-semibold text-emerald-800 hover:bg-emerald-100 shrink-0">10rb</button>
+                    <button type="button" onclick="setPaidAmount(20)" class="px-2 py-1 bg-white border border-emerald-300 rounded text-[10px] font-semibold text-emerald-800 hover:bg-emerald-100 shrink-0">20rb</button>
+                    <button type="button" onclick="setPaidAmount(50)" class="px-2 py-1 bg-white border border-emerald-300 rounded text-[10px] font-semibold text-emerald-800 hover:bg-emerald-100 shrink-0">50rb</button>
+                    <button type="button" onclick="setPaidAmount(100)" class="px-2 py-1 bg-white border border-emerald-300 rounded text-[10px] font-semibold text-emerald-800 hover:bg-emerald-100 shrink-0">100rb</button>
+                </div>
             </div>
         </div>
 
@@ -104,8 +129,8 @@
                     <input type="text" id="nameInput" required placeholder="Contoh: Indomilk Kids Cokelat" class="w-full mt-1 p-2 border rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-600 font-medium">Harga (Rp)</label>
-                    <input type="number" id="priceInput" required placeholder="Contoh: 4000" class="w-full mt-1 p-2 border rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500">
+                    <label class="block text-xs text-slate-600 font-medium">Harga (Tulis: 4 = 4.000, 10.5 = 10.500)</label>
+                    <input type="text" id="priceInput" required placeholder="Contoh: 4 atau 10.5" class="w-full mt-1 p-2 border rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <button type="submit" id="saveBtn" class="w-full bg-slate-800 text-white py-2 rounded-lg text-xs font-semibold hover:bg-slate-900">
                     💾 Simpan Harga
@@ -141,6 +166,21 @@
         let lastFailTime = 0;
         let failTimer = null;
 
+        // --- FUNGSI PINTAR: UBAH SINGKATAN KE RIBUAN ---
+        // Contoh: 2 -> 2000, 10 -> 10000, 10.5 atau 10,5 -> 10500
+        function processAmount(val) {
+            if (!val) return 0;
+            let str = val.toString().replace(',', '.').trim();
+            let num = parseFloat(str);
+            if (isNaN(num)) return 0;
+            
+            // Jika nilai angka di bawah 1000, otomatis dikali 1000
+            if (num > 0 && num < 1000) {
+                num = num * 1000;
+            }
+            return Math.round(num);
+        }
+
         function formatRupiah(num) {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
         }
@@ -163,7 +203,44 @@
             if ("vibrate" in navigator) navigator.vibrate(200);
         }
 
-        // --- SISTEM PEMERITAHUAN ---
+        // --- HITUNG KEMBALIAN PINTAR ---
+        function getGrandTotal() {
+            return Object.keys(cart).reduce((sum, key) => sum + (cart[key].price * cart[key].qty), 0);
+        }
+
+        function calculateChange() {
+            const total = getGrandTotal();
+            const paidRaw = document.getElementById('paidInput').value;
+            const paid = processAmount(paidRaw);
+            const changeOutput = document.getElementById('changeOutput');
+
+            if (paid === 0 || paidRaw === "") {
+                changeOutput.className = "text-sm font-bold text-slate-800";
+                changeOutput.innerText = "Rp 0";
+                return;
+            }
+
+            const change = paid - total;
+            if (change >= 0) {
+                changeOutput.className = "text-sm font-bold text-emerald-600";
+                changeOutput.innerText = formatRupiah(change);
+            } else {
+                changeOutput.className = "text-sm font-bold text-rose-600";
+                changeOutput.innerText = "Kurang " + formatRupiah(Math.abs(change));
+            }
+        }
+
+        function setPaidAmount(val) {
+            const total = getGrandTotal();
+            if (val === 'exact') {
+                document.getElementById('paidInput').value = total;
+            } else {
+                document.getElementById('paidInput').value = val; // Otomatis diproses oleh processAmount
+            }
+            calculateChange();
+        }
+
+        // --- SISTEM PEMERITAHUAN (CENTANG HIJAU / TANDA X BAWAH) ---
         function showScanFeedback(isSuccess, text) {
             if (isSuccess) {
                 const overlay = document.getElementById('successOverlay');
@@ -287,7 +364,7 @@
             }
         }
 
-        // --- LOGIKA PENCOCOKAN PINTAR (BISA DETEKSI MULTI-VARIAN) ---
+        // --- LOGIKA PENCOCOKAN BARANG ---
         function matchAndAddToCart(inputText, isExplicitAction = false) {
             const cleanInput = cleanAndFixText(inputText);
             if (cleanInput.length < 2) return;
@@ -322,14 +399,12 @@
                 }
             }
 
-            // KONDISI 1: Tepat 1 Barang Cocok -> Langsung Masuk Keranjang
             if (matchedKeys.length === 1) {
                 const key = matchedKeys[0];
                 showScanFeedback(true, products[key].name);
                 triggerVibration();
                 addToCart(key);
             } 
-            // KONDISI 2: Ada Beberapa Varian Cocok (Misal: Indomilk Kids & Indomilk Sachet) -> Buka Menu Pilihan
             else if (matchedKeys.length > 1) {
                 const searchInput = document.getElementById('manualSearchInput');
                 searchInput.value = inputText.trim();
@@ -338,7 +413,6 @@
                 document.getElementById('liveTextDisplay').innerText = `⚠️ Ditemukan ${matchedKeys.length} varian "${inputText}". Pilih di bawah!`;
                 triggerVibration();
             } 
-            // KONDISI 3: Tidak Ditemukan
             else if (isExplicitAction) {
                 showScanFeedback(false, `Barang "${inputText}" Tidak Ditemukan`);
             } else {
@@ -461,6 +535,7 @@
 
         function clearCart() {
             cart = {};
+            document.getElementById('paidInput').value = '';
             renderCart();
         }
 
@@ -469,14 +544,13 @@
             const keys = Object.keys(cart);
             cartList.innerHTML = '';
 
-            let grandTotal = 0;
+            let grandTotal = getGrandTotal();
             if (keys.length === 0) {
                 cartList.innerHTML = `<p class="text-center text-slate-400 py-3">Scan camera, sebut nama (mic), atau ketik di pencarian manual.</p>`;
             } else {
                 keys.forEach(key => {
                     const item = cart[key];
                     const subtotal = item.price * item.qty;
-                    grandTotal += subtotal;
                     cartList.innerHTML += `
                         <div class="flex justify-between items-center p-2 bg-slate-50 rounded border">
                             <div class="flex-1 pr-2">
@@ -494,16 +568,21 @@
                 });
             }
             document.getElementById('grandTotal').innerText = formatRupiah(grandTotal);
+            calculateChange();
         }
 
-        // SIMPAN / UPDATE BARANG MASTER
+        // SIMPAN / UPDATE BARANG MASTER (DENGAN CONVERT HARGA PINTAR)
         function saveProduct(e) {
             e.preventDefault();
             const key = document.getElementById('barcodeInput').value.trim().toUpperCase();
             const name = document.getElementById('nameInput').value.trim();
-            const price = parseInt(document.getElementById('priceInput').value);
+            const rawPrice = document.getElementById('priceInput').value;
+            const price = processAmount(rawPrice); // Mengubah 4 -> 4000, 10.5 -> 10500
 
-            if (!key || !name || isNaN(price)) return;
+            if (!key || !name || price === 0) {
+                alert("Mohon isi kode, nama, dan harga barang dengan benar.");
+                return;
+            }
 
             if (editingKey && editingKey !== key) {
                 delete products[editingKey];
@@ -514,7 +593,7 @@
 
             cancelEdit();
             renderEtalase();
-            alert(`Berhasil menyimpan ${name}!`);
+            alert(`Berhasil menyimpan ${name} dengan harga ${formatRupiah(price)}!`);
         }
 
         // EDIT BARANG
