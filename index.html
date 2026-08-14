@@ -68,14 +68,30 @@
         <!-- FORM TAMBAH / TAUTKAN BARANG -->
         <div class="bg-white rounded-xl shadow p-4 mb-4 border border-slate-200">
             <h2 id="formTitle" class="text-sm font-bold mb-3 text-slate-800">➕ Simpan / Tautkan Barcode Barang</h2>
-            <form id="productForm" onsubmit="saveProduct(event)" class="space-y-2.5 text-xs">
+            <form id="productForm" onsubmit="saveProduct(event)" class="space-y-3 text-xs">
                 
-                <!-- Dropdown Opsi: Buat Baru ATAU Tautkan -->
+                <!-- TOMBOL TOGGLE MODE: BUAT BARU VS TAUTKAN -->
                 <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Pilih Mode Penyimpanan:</label>
-                    <select id="linkSelect" onchange="handleLinkSelectChange()" class="w-full p-2 border rounded-lg bg-emerald-50 font-bold text-emerald-900 outline-none focus:ring-1 focus:ring-emerald-500">
-                        <!-- Diisi otomatis oleh JavaScript -->
-                    </select>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">Pilih Tindakan:</label>
+                    <div class="flex gap-2">
+                        <button type="button" id="modeNewBtn" onclick="setStorageMode('NEW')" class="flex-1 py-2 px-2 rounded-lg font-bold border text-center transition bg-emerald-600 text-white border-emerald-600 shadow-sm">➕ Barang Baru</button>
+                        <button type="button" id="modeLinkBtn" onclick="setStorageMode('LINK')" class="flex-1 py-2 px-2 rounded-lg font-bold border text-center transition bg-slate-100 text-slate-700 border-slate-300">🔗 Tautkan ke Barang Lama</button>
+                    </div>
+                </div>
+
+                <!-- PANEL SEARCH BARANG LAMA (Muncul Saat Mode Tautkan Aktif) -->
+                <div id="linkSearchPanel" class="hidden space-y-2 p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-lg">
+                    <label class="block text-[11px] font-bold text-indigo-900">🔍 Cari Nama Barang Lama:</label>
+                    <input type="text" id="linkSearchInput" onkeyup="filterLinkSearch()" placeholder="Ketik nama barang (misal: Gas, Indomilk)..." class="w-full p-2 border rounded-lg text-xs bg-white outline-indigo-500 font-semibold">
+                    
+                    <!-- Hasil Pencarian Tautan -->
+                    <div id="linkSearchResults" class="max-h-36 overflow-y-auto space-y-1"></div>
+
+                    <!-- Indikator Barang Terpilih -->
+                    <div id="selectedLinkBadge" class="hidden p-2 bg-emerald-100 border border-emerald-300 rounded-lg text-emerald-900 font-bold flex justify-between items-center">
+                        <span id="selectedLinkText" class="truncate pr-2"></span>
+                        <button type="button" onclick="clearSelectedLink()" class="text-xs bg-rose-500 text-white px-2 py-1 rounded font-bold hover:bg-rose-600">✕ Ganti</button>
+                    </div>
                 </div>
 
                 <div>
@@ -106,22 +122,20 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIKA KASIR MULTI-BARCODE -->
+    <!-- JAVASCRIPT LOGIKA KASIR MULTI-BARCODE & SEARCH TAUTAN -->
     <script>
-        // --- VARIABEL UTAMA ---
         let html5QrCode = null;
         let ocrWorker = null;
         let ocrInterval = null;
         let isProcessingOcr = false;
         let isLockingScan = false;
         let editingId = null;
+        let selectedLinkId = 'NEW'; // default mode NEW
 
-        // Migrasi & Muat Data Produk dari LocalStorage (Support Multi-Barcode)
         function loadProducts() {
             let data = localStorage.getItem('sembako_products_v2');
             if (data) return JSON.parse(data);
 
-            // Jika masih memakai format lama v1, konversikan otomatis
             let oldData = localStorage.getItem('sembako_products');
             if (oldData) {
                 let oldObj = JSON.parse(oldData);
@@ -130,17 +144,12 @@
                 for (let bCode in oldObj) {
                     let id = "PROD_" + (count++);
                     let bList = bCode.startsWith("MANUAL_") ? [] : [bCode];
-                    newObj[id] = {
-                        name: oldObj[bCode].name,
-                        price: oldObj[bCode].price,
-                        barcodes: bList
-                    };
+                    newObj[id] = { name: oldObj[bCode].name, price: oldObj[bCode].price, barcodes: bList };
                 }
                 localStorage.setItem('sembako_products_v2', JSON.stringify(newObj));
                 return newObj;
             }
 
-            // Data Bawaan Awal
             return {
                 "PROD_1": { name: "Indomilk Kids Cokelat", price: 4000, barcodes: ["INDOMILK1"] },
                 "PROD_2": { name: "Indomilk Sachet Renteng", price: 15000, barcodes: ["INDOMILK2"] },
@@ -155,7 +164,6 @@
         let lastFailTime = 0;
         let failTimer = null;
 
-        // --- HELPER MULTI-BARCODE ---
         function findProductIdByBarcode(barcode) {
             if (!barcode) return null;
             const clean = barcode.trim().toUpperCase();
@@ -196,6 +204,119 @@
 
         function triggerVibration() {
             if ("vibrate" in navigator) navigator.vibrate(200);
+        }
+
+        // --- SISTEM TOGGLE MODE & PENCAIRAN TAUTAN (BARU) ---
+        function setStorageMode(mode) {
+            selectedLinkId = mode;
+            const newBtn = document.getElementById('modeNewBtn');
+            const linkBtn = document.getElementById('modeLinkBtn');
+            const searchPanel = document.getElementById('linkSearchPanel');
+            const nameInput = document.getElementById('nameInput');
+            const priceInput = document.getElementById('priceInput');
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (mode === 'NEW') {
+                newBtn.className = "flex-1 py-2 px-2 rounded-lg font-bold border text-center transition bg-emerald-600 text-white border-emerald-600 shadow-sm";
+                linkBtn.className = "flex-1 py-2 px-2 rounded-lg font-bold border text-center transition bg-slate-100 text-slate-700 border-slate-300";
+                searchPanel.classList.add('hidden');
+                
+                if (!editingId) {
+                    nameInput.value = '';
+                    priceInput.value = '';
+                }
+                nameInput.disabled = false;
+                priceInput.disabled = false;
+                nameInput.classList.remove('bg-slate-100');
+                priceInput.classList.remove('bg-slate-100');
+                saveBtn.innerText = editingId ? "💾 Simpan Perubahan" : "💾 Simpan Barang Baru";
+            } else {
+                newBtn.className = "flex-1 py-2 px-2 rounded-lg font-bold border text-center transition bg-slate-100 text-slate-700 border-slate-300";
+                linkBtn.className = "flex-1 py-2 px-2 rounded-lg font-bold border text-center transition bg-indigo-600 text-white border-indigo-600 shadow-sm";
+                searchPanel.classList.remove('hidden');
+                
+                document.getElementById('linkSearchInput').value = '';
+                document.getElementById('selectedLinkBadge').classList.add('hidden');
+                document.getElementById('linkSearchResults').classList.remove('hidden');
+                document.getElementById('linkSearchInput').classList.remove('hidden');
+                
+                filterLinkSearch();
+                setTimeout(() => document.getElementById('linkSearchInput').focus(), 100);
+            }
+        }
+
+        function filterLinkSearch() {
+            const rawQuery = document.getElementById('linkSearchInput').value;
+            const query = cleanAndFixText(rawQuery);
+            const resultsDiv = document.getElementById('linkSearchResults');
+            resultsDiv.innerHTML = '';
+
+            let count = 0;
+            for (let id in products) {
+                const item = products[id];
+                const fullText = cleanAndFixText(item.name + " " + (item.barcodes || []).join(" "));
+
+                if (!query || fullText.includes(query)) {
+                    count++;
+                    const row = document.createElement('div');
+                    row.className = "p-2 hover:bg-indigo-100 bg-white border rounded-lg cursor-pointer flex justify-between items-center text-xs transition shadow-sm";
+                    row.innerHTML = `
+                        <div>
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <p class="text-[10px] text-slate-400 font-mono">${item.barcodes.length ? item.barcodes.join(', ') : 'Tanpa Barcode'}</p>
+                        </div>
+                        <span class="font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded">${formatRupiah(item.price)}</span>
+                    `;
+                    row.onclick = () => selectLinkItem(id);
+                    resultsDiv.appendChild(row);
+                }
+            }
+
+            if (count === 0) {
+                resultsDiv.innerHTML = `<p class="text-center text-slate-400 p-2 text-xs">Barang tidak ditemukan</p>`;
+            }
+        }
+
+        function selectLinkItem(id) {
+            selectedLinkId = id;
+            const item = products[id];
+            
+            document.getElementById('linkSearchResults').classList.add('hidden');
+            document.getElementById('linkSearchInput').classList.add('hidden');
+            
+            const badge = document.getElementById('selectedLinkBadge');
+            badge.classList.remove('hidden');
+            document.getElementById('selectedLinkText').innerText = `🔗 ${item.name} (${formatRupiah(item.price)})`;
+
+            const nameInput = document.getElementById('nameInput');
+            const priceInput = document.getElementById('priceInput');
+            nameInput.value = item.name;
+            priceInput.value = item.price;
+            nameInput.disabled = true;
+            priceInput.disabled = true;
+            nameInput.classList.add('bg-slate-100');
+            priceInput.classList.add('bg-slate-100');
+
+            document.getElementById('saveBtn').innerText = `🔗 Tautkan Barcode ke "${item.name}"`;
+        }
+
+        function clearSelectedLink() {
+            selectedLinkId = 'LINK';
+            document.getElementById('selectedLinkBadge').classList.add('hidden');
+            document.getElementById('linkSearchResults').classList.remove('hidden');
+            document.getElementById('linkSearchInput').classList.remove('hidden');
+            document.getElementById('linkSearchInput').value = '';
+            filterLinkSearch();
+
+            const nameInput = document.getElementById('nameInput');
+            const priceInput = document.getElementById('priceInput');
+            nameInput.value = '';
+            priceInput.value = '';
+            nameInput.disabled = false;
+            priceInput.disabled = false;
+            nameInput.classList.remove('bg-slate-100');
+            priceInput.classList.remove('bg-slate-100');
+            document.getElementById('saveBtn').innerText = "💾 Pilih Barang di Atas";
         }
 
         // --- KELOLA KERANJANG & KEMBALIAN ---
@@ -351,7 +472,6 @@
             else recognition.start();
         }
 
-        // --- PENCOCOKAN BARANG (KAMERA OCR & SUARA) ---
         function matchAndAddToCart(inputText, isExplicitAction = false) {
             const cleanInput = cleanAndFixText(inputText);
             if (cleanInput.length < 2) return;
@@ -465,7 +585,6 @@
             }
         }
 
-        // --- PENANGANAN DETEKSI BARCODE BARU / LAMA ---
         function handleDetectedKey(key) {
             if (isLockingScan) return;
 
@@ -478,19 +597,17 @@
             const matchedId = findProductIdByBarcode(key);
 
             if (matchedId) {
-                // BARCODE SUDAH TERHUBUNG KE BARANG -> Masukkan ke keranjang
                 isLockingScan = true;
                 showScanFeedback(true, products[matchedId].name);
                 triggerVibration();
                 addToCart(matchedId);
                 setTimeout(() => { isLockingScan = false; }, 2000);
             } else {
-                // BARCODE BARU TERDETEKSI!
                 document.getElementById('barcodeInput').value = key;
                 showScanFeedback(false, "Barcode Baru! Pilih Buat / Tautkan");
                 triggerVibration();
 
-                populateLinkDropdown();
+                setStorageMode('LINK');
                 document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
             }
         }
@@ -556,82 +673,31 @@
             calculateChange();
         }
 
-        // --- DROPDOWN TAUTKAN BARCODE ---
-        function populateLinkDropdown() {
-            const linkSelect = document.getElementById('linkSelect');
-            linkSelect.innerHTML = `<option value="NEW">➕ Buat Barang Baru (Nama & Harga Baru)</option>`;
-            
-            const ids = Object.keys(products);
-            if (ids.length > 0) {
-                const optGroup = document.createElement('optgroup');
-                optGroup.label = "--- ATAU TAUTKAN KE BARANG LAMA ---";
-                ids.forEach(id => {
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.innerText = `🔗 ${products[id].name} (${formatRupiah(products[id].price)})`;
-                    optGroup.appendChild(opt);
-                });
-                linkSelect.appendChild(optGroup);
-            }
-        }
-
-        function handleLinkSelectChange() {
-            const selectedVal = document.getElementById('linkSelect').value;
-            const nameInput = document.getElementById('nameInput');
-            const priceInput = document.getElementById('priceInput');
-            const saveBtn = document.getElementById('saveBtn');
-
-            if (selectedVal === 'NEW') {
-                if (!editingId) {
-                    nameInput.value = '';
-                    priceInput.value = '';
-                }
-                nameInput.disabled = false;
-                priceInput.disabled = false;
-                nameInput.classList.remove('bg-slate-100');
-                priceInput.classList.remove('bg-slate-100');
-                saveBtn.innerText = editingId ? "💾 Simpan Perubahan" : "💾 Simpan Barang Baru";
-            } else {
-                const item = products[selectedVal];
-                if (item) {
-                    nameInput.value = item.name;
-                    priceInput.value = item.price;
-                    nameInput.disabled = true;
-                    priceInput.disabled = true;
-                    nameInput.classList.add('bg-slate-100');
-                    priceInput.classList.add('bg-slate-100');
-                    saveBtn.innerText = `🔗 Tautkan Barcode ke "${item.name}"`;
-                }
-            }
-        }
-
-        // --- MANAJEMEN PENYIMPANAN & TAUTAN ---
+        // --- SIMPAN / TAUTKAN BARANG ---
         function saveProduct(e) {
             e.preventDefault();
             const barcode = document.getElementById('barcodeInput').value.trim().toUpperCase();
-            const selectedLink = document.getElementById('linkSelect').value;
 
-            // OPSI A: TAUTKAN BARCODE BARU KE BARANG LAMA
-            if (selectedLink !== 'NEW') {
+            // OPSI A: TAUTKAN BARCODE KE BARANG LAMA
+            if (selectedLinkId !== 'NEW' && selectedLinkId !== 'LINK') {
                 if (!barcode) {
                     alert("Isi atau scan barcode terlebih dahulu sebelum menautkan!");
                     return;
                 }
-                const targetProd = products[selectedLink];
+                const targetProd = products[selectedLinkId];
 
-                // Cek apakah barcode sudah ada di produk lain
                 const existingOwnerId = findProductIdByBarcode(barcode);
-                if (existingOwnerId && existingOwnerId !== selectedLink) {
-                    alert(`Barcode "${barcode}" sudah dipakai oleh barang lain: "${products[existingOwnerId].name}". Hapus dulu dari sana jika ingin memindahkan.`);
+                if (existingOwnerId && existingOwnerId !== selectedLinkId) {
+                    alert(`Barcode "${barcode}" sudah dipakai oleh barang lain: "${products[existingOwnerId].name}".`);
                     return;
                 }
 
                 if (!targetProd.barcodes.includes(barcode)) {
                     targetProd.barcodes.push(barcode);
                     localStorage.setItem('sembako_products_v2', JSON.stringify(products));
-                    alert(`Berhasil! Barcode "${barcode}" sekarang terhubung dengan ${targetProd.name}.`);
+                    alert(`Berhasil! Barcode "${barcode}" ditautkan ke ${targetProd.name}.`);
                 } else {
-                    alert(`Barcode "${barcode}" memang sudah terhubung dengan ${targetProd.name}.`);
+                    alert(`Barcode "${barcode}" sudah ada di ${targetProd.name}.`);
                 }
 
                 cancelEdit();
@@ -639,7 +705,12 @@
                 return;
             }
 
-            // OPSI B: BUAT BARANG BARU ATAU EDIT DETAIL
+            if (selectedLinkId === 'LINK') {
+                alert("Mohon ketik & klik nama barang lama yang mau ditautkan!");
+                return;
+            }
+
+            // OPSI B: BARANG BARU
             const name = document.getElementById('nameInput').value.trim();
             const rawPrice = document.getElementById('priceInput').value;
             const price = processAmount(rawPrice);
@@ -650,14 +721,12 @@
             }
 
             if (editingId) {
-                // Edit barang yang sudah ada
                 products[editingId].name = name;
                 products[editingId].price = price;
                 if (barcode && !products[editingId].barcodes.includes(barcode)) {
                     products[editingId].barcodes.push(barcode);
                 }
             } else {
-                // Buat barang baru
                 const id = "PROD_" + Date.now();
                 const bList = barcode ? [barcode] : [];
                 products[id] = { name: name, price: price, barcodes: bList };
@@ -674,9 +743,7 @@
             editingId = id;
             const item = products[id];
 
-            populateLinkDropdown();
-            document.getElementById('linkSelect').value = 'NEW';
-            handleLinkSelectChange();
+            setStorageMode('NEW');
 
             document.getElementById('barcodeInput').value = item.barcodes.length ? item.barcodes[0] : '';
             document.getElementById('nameInput').value = item.name;
@@ -699,14 +766,13 @@
         function cancelEdit() {
             editingId = null;
             document.getElementById('productForm').reset();
-            populateLinkDropdown();
-            handleLinkSelectChange();
+            setStorageMode('NEW');
             document.getElementById('formTitle').innerText = "➕ Simpan / Tautkan Barcode Barang";
             document.getElementById('cancelEditBtn').classList.add('hidden');
         }
 
         function deleteProduct(id) {
-            if (confirm(`Hapus "${products[id].name}" beserta seluruh barcode-nya dari etalase?`)) {
+            if (confirm(`Hapus "${products[id].name}" dari etalase?`)) {
                 delete products[id];
                 localStorage.setItem('sembako_products_v2', JSON.stringify(products));
                 renderEtalase();
@@ -773,8 +839,6 @@
             });
         }
 
-        // Inisialisasi awal
-        populateLinkDropdown();
         renderCart();
         renderEtalase();
     </script>
