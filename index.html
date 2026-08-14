@@ -412,7 +412,7 @@
             }
         }
 
-        // --- PENANGANAN BARCODE DENGAN SISTEM ANTI-DOUBLE SCAN ---
+                // --- PENANGANAN BARCODE (OTOMATIS TANGKAP BARCODE BARU) ---
         function handleDetectedKey(key) {
             if (isLockingScan) return; // Mencegah scan beruntun / dobel
 
@@ -423,16 +423,26 @@
             lastScanTime = now;
 
             if (products[key]) {
+                // JIKA BARANG SUDAH ADA DI ETALASE -> Masukkan ke keranjang
                 isLockingScan = true;
                 showScanFeedback(true, products[key].name);
                 triggerVibration();
                 addToCart(key);
-                // Buka kunci setelah 2 detik
                 setTimeout(() => { isLockingScan = false; }, 2000);
             } else {
-                showScanFeedback(false, "Barcode Tidak Ditemukan");
+                // JIKA BARANG BELUM ADA -> Otomatis isi form barang baru!
+                document.getElementById('barcodeInput').value = key;
+                showScanFeedback(false, "Barcode Baru! Isi Nama & Harga");
+                triggerVibration();
+
+                // Otomatis geser layar ke form & fokus ke input Nama Barang
+                document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => {
+                    document.getElementById('nameInput').focus();
+                }, 500);
             }
         }
+
 
         // --- MANAJEMEN KERANJANG ---
         function addToCart(key) {
