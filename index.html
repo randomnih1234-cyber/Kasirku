@@ -23,31 +23,31 @@
                 <!-- Frame Kamera -->
                 <div id="reader" class="w-full bg-black min-h-[180px]"></div>
 
-                <!-- OVERLAY FEEDBACK (CENTANG HIJAU / TANDA X MERAH) -->
-                <div id="scanOverlay" class="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] flex flex-col items-center justify-center hidden transition-all duration-200 opacity-0 scale-90 pointer-events-none z-20">
-                    <div id="overlayIconBg" class="bg-emerald-500 text-white p-3 rounded-full shadow-lg">
-                        <!-- Icon Centang Hijau -->
-                        <svg id="checkSvg" class="w-8 h-8 stroke-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <!-- OVERLAY CENTANG HIJAU (HANYA MUNCUL SAAT SUKSES) -->
+                <div id="successOverlay" class="absolute inset-0 bg-emerald-950/60 backdrop-blur-[2px] flex flex-col items-center justify-center hidden transition-all duration-200 opacity-0 scale-90 pointer-events-none z-20">
+                    <div class="bg-emerald-500 text-white p-3 rounded-full shadow-lg ring-4 ring-emerald-300/50">
+                        <svg class="w-8 h-8 stroke-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                        <!-- Icon Silang (X) Merah -->
-                        <svg id="crossSvg" class="w-8 h-8 stroke-current hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
                     </div>
-                    <!-- Teks Nama Barang / Pesan -->
-                    <span id="overlayText" class="text-white font-bold mt-2 text-xs text-center px-4">Ter-scan!</span>
+                    <span id="successText" class="text-white font-bold mt-2 text-xs text-center px-4">Ter-scan!</span>
                 </div>
             </div>
 
-            <!-- INDIKATOR TEKS REAL-TIME DARI KAMERA & SUARA -->
-            <div class="mt-2 bg-slate-100 p-2 rounded-lg border text-center">
+            <!-- INDIKATOR TEKS REAL-TIME & NOTIFIKASI GAGAL DI BAWAH KAMERA -->
+            <div class="mt-2 bg-slate-100 p-2.5 rounded-lg border text-center relative">
                 <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Status Kamera / Suara Live:</p>
                 <p id="liveTextDisplay" class="text-xs font-mono font-bold text-emerald-800 truncate mt-0.5">Kamera mati.</p>
+                
+                <!-- INDIKATOR GAGAL (KECIL DI BAWAH STATUS) -->
+                <div id="failIndicator" class="hidden mt-1.5 pt-1.5 border-t border-slate-200 flex items-center justify-center gap-1 text-xs font-bold text-rose-600">
+                    <span>❌</span>
+                    <span id="failText">Tidak Ditemukan di Etalase</span>
+                </div>
             </div>
 
             <!-- TOMBOL KONTROL -->
-            <div class="flex items-center gap-2 mt-3">
+            <div class="flex items-center gap-2 mt-3 mb-2">
                 <button onclick="startScanner()" class="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-emerald-700">
                     📷 Buka Kamera
                 </button>
@@ -61,6 +61,13 @@
                     🛑 Stop Kamera
                 </button>
             </div>
+
+            <!-- FITUR CARI MANUAL (KETIK) -->
+            <div class="relative">
+                <input type="text" id="manualSearchInput" onkeyup="filterManualSearch()" placeholder="🔍 Cari / ketik nama barang manual..." class="w-full p-2 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50">
+                <!-- DROPDOWN REKOMENDASI HASIL PENCARIAN -->
+                <div id="searchResults" class="absolute left-0 right-0 top-full mt-1 bg-white border rounded-lg shadow-xl max-h-40 overflow-y-auto z-30 hidden"></div>
+            </div>
         </div>
 
         <!-- KERANJANG BELANJA & TOTAL HARGA -->
@@ -71,7 +78,7 @@
             </div>
 
             <div id="cartList" class="space-y-2 max-h-48 overflow-y-auto mb-3 text-xs">
-                <p class="text-center text-slate-400 py-3">Sebut nama barang (via mic), scan barcode, atau pilih dari etalase.</p>
+                <p class="text-center text-slate-400 py-3">Scan camera, sebut nama (mic), atau ketik di pencarian manual.</p>
             </div>
 
             <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200 flex justify-between items-center">
@@ -124,13 +131,15 @@
 
         // Data barang tersimpan di HP
         let products = JSON.parse(localStorage.getItem('sembako_products')) || {
-            "INDOMILK": { name: "Indomilk Kids Cokelat", price: 4000 },
+            "INDOMILK1": { name: "Indomilk Kids Cokelat", price: 4000 },
+            "INDOMILK2": { name: "Indomilk Sachet Renteng", price: 15000 },
             "INDOMIE": { name: "Indomie Goreng", price: 3500 }
         };
         let cart = {}; 
         let lastScannedKey = null;
         let lastScanTime = 0;
         let lastFailTime = 0;
+        let failTimer = null;
 
         function formatRupiah(num) {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
@@ -154,36 +163,80 @@
             if ("vibrate" in navigator) navigator.vibrate(200);
         }
 
-        // --- OVERLAY FEEDBACK (CENTANG HIJAU & TANDA X MERAH) ---
+        // --- SISTEM PEMERITAHUAN ---
         function showScanFeedback(isSuccess, text) {
-            const overlay = document.getElementById('scanOverlay');
-            const iconBg = document.getElementById('overlayIconBg');
-            const checkSvg = document.getElementById('checkSvg');
-            const crossSvg = document.getElementById('crossSvg');
-            const overlayText = document.getElementById('overlayText');
-
-            overlayText.innerText = text;
-
             if (isSuccess) {
-                // Tampilan Centang Hijau + Nama Barang
-                iconBg.className = "bg-emerald-500 text-white p-3 rounded-full shadow-lg ring-4 ring-emerald-300/50";
-                checkSvg.classList.remove('hidden');
-                crossSvg.classList.add('hidden');
+                const overlay = document.getElementById('successOverlay');
+                document.getElementById('successText').innerText = text;
+
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0', 'scale-90'), 10);
+
+                setTimeout(() => {
+                    overlay.classList.add('opacity-0', 'scale-90');
+                    setTimeout(() => overlay.classList.add('hidden'), 200);
+                }, 800);
+
+                document.getElementById('failIndicator').classList.add('hidden');
+
             } else {
-                // Tampilan Tanda X Merah + "Tidak Ditemukan"
-                iconBg.className = "bg-rose-500 text-white p-3 rounded-full shadow-lg ring-4 ring-rose-300/50";
-                checkSvg.classList.add('hidden');
-                crossSvg.classList.remove('hidden');
+                const failIndicator = document.getElementById('failIndicator');
+                document.getElementById('failText').innerText = text;
+
+                failIndicator.classList.remove('hidden');
+
+                if (failTimer) clearTimeout(failTimer);
+                failTimer = setTimeout(() => {
+                    failIndicator.classList.add('hidden');
+                }, 1800);
+            }
+        }
+
+        // --- FITUR PENCARIAN MANUAL (KETIK) ---
+        function filterManualSearch() {
+            const rawQuery = document.getElementById('manualSearchInput').value;
+            const query = cleanAndFixText(rawQuery);
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '';
+
+            if (query.length === 0) {
+                resultsDiv.classList.add('hidden');
+                return;
             }
 
-            overlay.classList.remove('hidden');
-            setTimeout(() => overlay.classList.remove('opacity-0', 'scale-90'), 10);
+            let matches = 0;
+            for (let key in products) {
+                const item = products[key];
+                const fullText = cleanAndFixText(key + " " + item.name);
 
-            // Hilang otomatis setelah 800ms
-            setTimeout(() => {
-                overlay.classList.add('opacity-0', 'scale-90');
-                setTimeout(() => overlay.classList.add('hidden'), 200);
-            }, 800);
+                if (fullText.includes(query) || query.split(/\s+/).some(q => q.length >= 3 && fullText.includes(q))) {
+                    matches++;
+                    const row = document.createElement('div');
+                    row.className = "p-2.5 hover:bg-emerald-50 cursor-pointer border-b last:border-b-0 flex justify-between items-center text-xs transition";
+                    row.innerHTML = `
+                        <div>
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <p class="text-[10px] text-slate-400">Kode: ${key}</p>
+                        </div>
+                        <span class="font-bold text-emerald-700">${formatRupiah(item.price)}</span>
+                    `;
+                    row.onclick = () => {
+                        addToCart(key);
+                        showScanFeedback(true, item.name);
+                        triggerVibration();
+                        document.getElementById('manualSearchInput').value = '';
+                        resultsDiv.classList.add('hidden');
+                    };
+                    resultsDiv.appendChild(row);
+                }
+            }
+
+            if (matches > 0) {
+                resultsDiv.classList.remove('hidden');
+            } else {
+                resultsDiv.innerHTML = `<div class="p-3 text-center text-slate-400 text-xs">Barang tidak ditemukan di etalase</div>`;
+                resultsDiv.classList.remove('hidden');
+            }
         }
 
         // --- FITUR PERINTAH SUARA ---
@@ -207,7 +260,7 @@
             recognition.onresult = (event) => {
                 const spokenText = event.results[0][0].transcript;
                 document.getElementById('liveTextDisplay').innerText = `Suara: "${spokenText}"`;
-                matchAndAddToCart(spokenText, true); // true = dipanggil via aksi langsung
+                matchAndAddToCart(spokenText, true);
             };
 
             recognition.onerror = () => {
@@ -234,50 +287,65 @@
             }
         }
 
-        // --- PENCOCOKAN BARANG ---
+        // --- LOGIKA PENCOCOKAN PINTAR (BISA DETEKSI MULTI-VARIAN) ---
         function matchAndAddToCart(inputText, isExplicitAction = false) {
             const cleanInput = cleanAndFixText(inputText);
             if (cleanInput.length < 2) return;
 
-            let bestMatchKey = null;
-            let maxScore = 0;
+            let matchedKeys = [];
 
             for (let key in products) {
                 const item = products[key];
                 const fullTargetText = cleanAndFixText(key + " " + item.name);
 
-                if (cleanInput.includes(fullTargetText) || fullTargetText.includes(cleanInput)) {
-                    bestMatchKey = key;
-                    break;
-                }
-
+                const inputWords = cleanInput.split(/\s+/).filter(w => w.length >= 3);
                 const targetWords = fullTargetText.split(/\s+/).filter(w => w.length >= 3);
-                let score = 0;
 
-                for (let word of targetWords) {
-                    if (cleanInput.includes(word)) score++;
+                let isMatch = false;
+
+                if (cleanInput.includes(fullTargetText) || fullTargetText.includes(cleanInput)) {
+                    isMatch = true;
+                } else {
+                    for (let inW of inputWords) {
+                        for (let tarW of targetWords) {
+                            if (tarW.includes(inW) || inW.includes(tarW)) {
+                                isMatch = true;
+                                break;
+                            }
+                        }
+                        if (isMatch) break;
+                    }
                 }
 
-                if (score > maxScore) {
-                    maxScore = score;
-                    bestMatchKey = key;
+                if (isMatch) {
+                    matchedKeys.push(key);
                 }
             }
 
-            if (bestMatchKey) {
-                // BERHASIL: Tampilkan Centang Hijau & Nama Barang
-                showScanFeedback(true, products[bestMatchKey].name);
+            // KONDISI 1: Tepat 1 Barang Cocok -> Langsung Masuk Keranjang
+            if (matchedKeys.length === 1) {
+                const key = matchedKeys[0];
+                showScanFeedback(true, products[key].name);
                 triggerVibration();
-                addToCart(bestMatchKey);
-            } else if (isExplicitAction) {
-                // GAGAL: Tampilkan Tanda X Merah
-                showScanFeedback(false, "Barang Tidak Ditemukan");
+                addToCart(key);
+            } 
+            // KONDISI 2: Ada Beberapa Varian Cocok (Misal: Indomilk Kids & Indomilk Sachet) -> Buka Menu Pilihan
+            else if (matchedKeys.length > 1) {
+                const searchInput = document.getElementById('manualSearchInput');
+                searchInput.value = inputText.trim();
+                filterManualSearch();
+
+                document.getElementById('liveTextDisplay').innerText = `⚠️ Ditemukan ${matchedKeys.length} varian "${inputText}". Pilih di bawah!`;
+                triggerVibration();
+            } 
+            // KONDISI 3: Tidak Ditemukan
+            else if (isExplicitAction) {
+                showScanFeedback(false, `Barang "${inputText}" Tidak Ditemukan`);
             } else {
-                // Kamera live (hanya tampilkan Tanda X Merah maksimal sekali tiap 3 detik agar tidak berkedip terus)
                 const now = Date.now();
-                if (now - lastFailTime > 3000) {
+                if (now - lastFailTime > 2500) {
                     lastFailTime = now;
-                    showScanFeedback(false, "Tidak Ditemukan");
+                    showScanFeedback(false, "Tidak Ditemukan di Etalase");
                 }
             }
         }
@@ -313,6 +381,7 @@
                 html5QrCode.stop().then(() => {
                     document.getElementById("reader").innerHTML = "";
                     document.getElementById('liveTextDisplay').innerText = "Kamera mati.";
+                    document.getElementById('failIndicator').classList.add('hidden');
                 });
             }
         }
@@ -402,7 +471,7 @@
 
             let grandTotal = 0;
             if (keys.length === 0) {
-                cartList.innerHTML = `<p class="text-center text-slate-400 py-3">Sebut nama barang (via mic), scan barcode, atau pilih dari etalase.</p>`;
+                cartList.innerHTML = `<p class="text-center text-slate-400 py-3">Scan camera, sebut nama (mic), atau ketik di pencarian manual.</p>`;
             } else {
                 keys.forEach(key => {
                     const item = cart[key];
