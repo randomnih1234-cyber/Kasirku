@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Sembako + OCR Teks</title>
+    <title>Kasir Sembako Live OCR</title>
     <!-- Library Barcode Scanner -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <!-- Library OCR Teks (Membaca Tulisan dari Gambar) -->
+    <!-- Library OCR Teks Tesseract -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <!-- Styling Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,23 +17,435 @@
         <!-- Header -->
         <header class="text-center my-3">
             <h1 class="text-2xl font-bold text-emerald-700">🛒 Kasir Sembako Pro</h1>
-            <p class="text-xs text-slate-500">Scan Barcode atau Foto Tulisan Kemasan (OCR)</p>
+            <p class="text-xs text-slate-500">Scan Barcode & Teks Merk Langsung via Kamera</p>
         </header>
 
-        <!-- AREA SCANNER BARCODE & TEKS -->
+        <!-- AREA KAMERA & OVERLAY -->
         <div class="bg-white rounded-xl shadow p-4 mb-4">
             <div class="relative overflow-hidden rounded-lg">
-                <div id="reader" class="w-full bg-black min-h-[180px]"></div>
+                <!-- Area Live Kamera -->
+                <div id="reader" class="w-full bg-black min-h-[200px]"></div>
+
+                <!-- OVERLAY CENTANG HIJAU -->
+                <div id="scanCheckOverlay" class="absolute inset-0 bg-emerald-950/50 backdrop-blur-[2px] flex flex-col items-center justify-center hidden z-20 transition-all duration-200 opacity-0 scale-90 pointer-events-none">
+                    <div class="bg-emerald-500 text-white p-3 rounded-full shadow-lg ring-4 ring-emerald-300/50">
+                        <svg class="w-10 h-10 stroke-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <span id="checkText" class="text-white font-bold mt-2 text-xs drop-shadow">Ter-scan!</span>
+                </div>
+            </div>
+
+            <!-- Status Pemindaian Teks Live -->
+            <div class="mt-2 text-center">
+                <span id="ocrStatus" class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                    📷 Kamera Mati
+                </span>
             </div>
 
             <div class="flex gap-2 mt-3">
                 <button onclick="startScanner()" class="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700">
-                    📷 Buka Kamera Barcode
+                    📷 Buka Kamera
                 </button>
                 <button onclick="stopScanner()" class="flex-1 bg-rose-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-rose-700">
                     🛑 Stop Kamera
                 </button>
             </div>
+        </div>
+
+        <!-- DAFTAR CEPAT -->
+        <div class="bg-white rounded-xl shadow p-4 mb-4">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">⚡ Tombol Cepat (Tanpa Barcode)</h2>
+            <div id="quickList" class="grid grid-cols-2 gap-2"></div>
+        </div>
+
+        <!-- KERANJANG BELANJA -->
+        <div class="bg-white rounded-xl shadow-md p-4 mb-4 border-2 border-emerald-500">
+            <div class="flex justify-between items-center mb-3 pb-2 border-b">
+                <h2 class="text-md font-bold text-slate-800">🛍️ Keranjang Belanja</h2>
+                <button onclick="clearCart()" class="text-xs text-rose-600 font-semibold">🗑️ Kosongkan</button>
+            </div>
+
+            <div id="cartList" class="space-y-2 max-h-48 overflow-y-auto mb-3 pr-1 text-xs">
+                <p class="text-center text-xs text-slate-400 py-4">Keranjang kosong.<br>Arahkan kamera ke barcode atau tulisan merk.</p>
+            </div>
+
+            <!-- Ringkasan Total & Pembayaran -->
+            <div class="bg-slate-50 p-3 rounded-lg space-y-2 border">
+                <div class="flex justify-between items-center text-sm font-bold text-slate-700">
+                    <span>Total Belanja:</span>
+                    <span id="grandTotal" class="text-lg text-emerald-600">Rp 0</span>
+                </div>
+                <hr class="my-1 border-dashed">
+                <div class="grid grid-cols-2 gap-2 items-center text-xs">
+                    <div>
+                        <label class="block font-medium text-slate-600">Uang Dibayar (Rp):</label>
+                        <input type="number" id="paidInput" oninput="calculateChange()" placeholder="0" class="w-full mt-1 p-1.5 border rounded text-sm font-semibold outline-none">
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-slate-500">Kembalian:</span>
+                        <span id="changeOutput" class="text-sm font-bold text-slate-800">Rp 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="finishTransaction()" class="w-full mt-3 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-emerald-700">
+                ✅ Selesai / Transaksi Baru
+            </button>
+        </div>
+
+        <!-- MASTER DATA BARANG -->
+        <div class="bg-white rounded-xl shadow p-4 mb-4">
+            <h2 class="text-md font-bold mb-3 text-slate-700">➕ Master Data Barang</h2>
+            <form id="productForm" onsubmit="saveProduct(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600">Kode Barcode / Keyword Merk (Kapital)</label>
+                    <input type="text" id="barcodeInput" required placeholder="Contoh: 89912345 atau INDOMILK" class="w-full mt-1 p-2 border rounded-lg text-sm outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600">Nama Barang</label>
+                    <input type="text" id="nameInput" required placeholder="Contoh: Susu Indomilk Cokelat" class="w-full mt-1 p-2 border rounded-lg text-sm outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600">Harga (Rp)</label>
+                    <input type="number" id="priceInput" required placeholder="Contoh: 6000" class="w-full mt-1 p-2 border rounded-lg text-sm outline-none">
+                </div>
+                <button type="submit" class="w-full bg-slate-800 text-white py-2 rounded-lg text-sm font-semibold">
+                    💾 Simpan Barang
+                </button>
+            </form>
+        </div>
+
+        <!-- DAFTAR MASTER HARGA -->
+        <div class="bg-white rounded-xl shadow p-4">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-md font-bold text-slate-700">📦 Daftar Master Harga</h2>
+                <span id="totalItems" class="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full font-semibold">0 Barang</span>
+            </div>
+            <input type="text" id="searchInput" onkeyup="renderMasterProducts()" placeholder="🔍 Cari nama / keyword..." class="w-full p-2 border rounded-lg text-sm mb-3 outline-none">
+            <div id="productList" class="space-y-2 max-h-48 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script>
+        let html5QrCode = null;
+        let ocrWorker = null;
+        let ocrInterval = null;
+        let isProcessingOcr = false;
+
+        let products = JSON.parse(localStorage.getItem('sembako_products')) || {
+            "INDOMILK": { name: "Susu Indomilk Cokelat", price: 6000 },
+            "INDOMIE": { name: "Indomie Goreng", price: 3500 },
+            "TELUR": { name: "Telur 1/4 Kg", price: 7000 }
+        };
+        let cart = {}; 
+        let lastScannedKey = null;
+        let lastScanTime = 0;
+
+        function formatRupiah(num) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+        }
+
+        function triggerVibration() {
+            if ("vibrate" in navigator) navigator.vibrate(200);
+        }
+
+        function showGreenCheckmark(text = "Ter-scan!") {
+            document.getElementById('checkText').innerText = text;
+            const overlay = document.getElementById('scanCheckOverlay');
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0', 'scale-90');
+                overlay.classList.add('opacity-100', 'scale-100');
+            }, 10);
+
+            setTimeout(() => {
+                overlay.classList.remove('opacity-100', 'scale-100');
+                overlay.classList.add('opacity-0', 'scale-90');
+                setTimeout(() => overlay.classList.add('hidden'), 200);
+            }, 800);
+        }
+
+        // --- BUKA KAMERA DUAL: BARCODE + OCR TEKS LIVE ---
+        async function startScanner() {
+            if (html5QrCode && html5QrCode.isScanning) return;
+
+            const statusTxt = document.getElementById('ocrStatus');
+            statusTxt.innerText = "⏳ Membuka Kamera & Sistem Pembaca Teks...";
+
+            // Inisialisasi OCR Worker di latar belakang
+            if (!ocrWorker) {
+                try {
+                    ocrWorker = await Tesseract.createWorker('ind');
+                } catch(e) {
+                    console.log("OCR init fallback");
+                }
+            }
+
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 150 } },
+                onBarcodeSuccess,
+                () => {}
+            ).then(() => {
+                statusTxt.innerText = "🔍 Kamera Aktif: Memindai Barcode & Teks Merk...";
+                // Mulai membaca frame live kamera untuk Teks Merk setiap 2.5 detik
+                ocrInterval = setInterval(processLiveFrameOCR, 2500);
+            }).catch(err => {
+                statusTxt.innerText = "❌ Kamera Gagal Dibuka";
+                alert("Gagal membuka kamera: " + err);
+            });
+        }
+
+        function stopScanner() {
+            if (ocrInterval) clearInterval(ocrInterval);
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById("reader").innerHTML = "";
+                    document.getElementById('ocrStatus').innerText = "📷 Kamera Mati";
+                });
+            }
+        }
+
+        // --- SCAN BARCODE SUKSES ---
+        function onBarcodeSuccess(decodedText) {
+            handleDetectedKey(decodedText, "Barcode");
+        }
+
+        // --- PROSES PEMBACAAN TEKS LIVE DARI FRAME KAMERA ---
+        async function processLiveFrameOCR() {
+            if (isProcessingOcr || !ocrWorker) return;
+
+            const videoElement = document.querySelector("#reader video");
+            if (!videoElement || videoElement.readyState !== 4) return;
+
+            isProcessingOcr = true;
+            const statusTxt = document.getElementById('ocrStatus');
+
+            try {
+                // Ambil snapshot gambar dari video kamera
+                const canvas = document.createElement("canvas");
+                canvas.width = videoElement.videoWidth / 2; // perkecil ukuran agar proses cepat
+                canvas.height = videoElement.videoHeight / 2;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                // Baca tulisan di snapshot
+                const result = await ocrWorker.recognize(canvas);
+                const textFound = result.data.text.toUpperCase();
+
+                // Pencocokan kata kunci merk
+                for (let key in products) {
+                    if (textFound.includes(key.toUpperCase())) {
+                        handleDetectedKey(key, `Teks: ${key}`);
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.error("OCR Frame Error", e);
+            } finally {
+                isProcessingOcr = false;
+            }
+        }
+
+        // --- HANDLE APABILA BARKODE ATAU TEKS DITEMUKAN ---
+        function handleDetectedKey(key, sourceLabel) {
+            const now = Date.now();
+            if (key === lastScannedKey && (now - lastScanTime) < 2000) return;
+
+            lastScannedKey = key;
+            lastScanTime = now;
+
+            if (products[key]) {
+                showGreenCheckmark(products[key].name);
+                triggerVibration();
+                addToCart(key);
+            } else if (sourceLabel === "Barcode") {
+                document.getElementById('barcodeInput').value = key;
+                alert(`Barcode [${key}] belum terdaftar! Silakan lengkapi di form bawah.`);
+                document.getElementById('nameInput').focus();
+            }
+        }
+
+        // --- KERANJANG FUNCTIONS ---
+        function addToCart(key) {
+            if (!products[key]) return;
+            if (cart[key]) {
+                cart[key].qty += 1;
+            } else {
+                cart[key] = { name: products[key].name, price: products[key].price, qty: 1 };
+            }
+            renderCart();
+        }
+
+        function updateQty(key, change) {
+            if (cart[key]) {
+                cart[key].qty += change;
+                if (cart[key].qty <= 0) delete cart[key];
+                renderCart();
+            }
+        }
+
+        function removeFromCart(key) {
+            delete cart[key];
+            renderCart();
+        }
+
+        function clearCart() {
+            cart = {};
+            document.getElementById('paidInput').value = '';
+            renderCart();
+        }
+
+        function getGrandTotal() {
+            return Object.keys(cart).reduce((sum, key) => sum + (cart[key].price * cart[key].qty), 0);
+        }
+
+        function calculateChange() {
+            const grandTotal = getGrandTotal();
+            const paid = parseInt(document.getElementById('paidInput').value) || 0;
+            const change = paid - grandTotal;
+            const changeOutput = document.getElementById('changeOutput');
+
+            if (paid > 0 && change >= 0) {
+                changeOutput.className = "text-sm font-bold text-emerald-600";
+                changeOutput.innerText = formatRupiah(change);
+            } else if (paid > 0 && change < 0) {
+                changeOutput.className = "text-sm font-bold text-rose-600";
+                changeOutput.innerText = "Kurang " + formatRupiah(Math.abs(change));
+            } else {
+                changeOutput.className = "text-sm font-bold text-slate-800";
+                changeOutput.innerText = "Rp 0";
+            }
+        }
+
+        function renderCart() {
+            const cartList = document.getElementById('cartList');
+            const keys = Object.keys(cart);
+            cartList.innerHTML = '';
+
+            if (keys.length === 0) {
+                cartList.innerHTML = `<p class="text-center text-xs text-slate-400 py-4">Keranjang kosong.<br>Arahkan kamera ke barcode atau tulisan merk.</p>`;
+            } else {
+                keys.forEach(key => {
+                    const item = cart[key];
+                    const subtotal = item.price * item.qty;
+                    const row = document.createElement('div');
+                    row.className = "flex justify-between items-center p-2 bg-slate-50 rounded border text-xs";
+                    row.innerHTML = `
+                        <div class="flex-1 pr-2">
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <p class="text-slate-500">${formatRupiah(item.price)} x ${item.qty} = <span class="font-semibold text-emerald-700">${formatRupiah(subtotal)}</span></p>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="updateQty('${key}', -1)" class="w-6 h-6 bg-slate-200 text-slate-700 font-bold rounded">-</button>
+                            <span class="w-6 text-center font-bold">${item.qty}</span>
+                            <button onclick="updateQty('${key}', 1)" class="w-6 h-6 bg-slate-200 text-slate-700 font-bold rounded">+</button>
+                            <button onclick="removeFromCart('${key}')" class="ml-1 text-rose-500 font-bold p-1">❌</button>
+                        </div>
+                    `;
+                    cartList.appendChild(row);
+                });
+            }
+
+            document.getElementById('grandTotal').innerText = formatRupiah(getGrandTotal());
+            calculateChange();
+        }
+
+        function finishTransaction() {
+            const total = getGrandTotal();
+            if (total === 0) return alert("Keranjang belanja masih kosong!");
+            alert(`Transaksi selesai! Total Belanja: ${formatRupiah(total)}`);
+            clearCart();
+        }
+
+        // --- MASTER DATA FUNCTIONS ---
+        function saveProduct(e) {
+            e.preventDefault();
+            const key = document.getElementById('barcodeInput').value.trim().toUpperCase();
+            const name = document.getElementById('nameInput').value.trim();
+            const price = parseInt(document.getElementById('priceInput').value);
+
+            if (!key || !name || isNaN(price)) return;
+
+            products[key] = { name: name, price: price };
+            localStorage.setItem('sembako_products', JSON.stringify(products));
+
+            document.getElementById('productForm').reset();
+            renderMasterProducts();
+            renderQuickList();
+            addToCart(key);
+        }
+
+        function deleteMasterProduct(key) {
+            if (confirm("Hapus barang ini dari Master Data?")) {
+                delete products[key];
+                localStorage.setItem('sembako_products', JSON.stringify(products));
+                renderMasterProducts();
+                renderQuickList();
+            }
+        }
+
+        function renderQuickList() {
+            const container = document.getElementById('quickList');
+            container.innerHTML = '';
+            const keys = Object.keys(products);
+
+            keys.forEach(key => {
+                const item = products[key];
+                const btn = document.createElement('button');
+                btn.className = "p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-left text-xs text-emerald-900 font-medium truncate";
+                btn.innerHTML = `<span class="font-bold block truncate">${item.name}</span><span class="text-[10px] text-emerald-600">${formatRupiah(item.price)}</span>`;
+                btn.onclick = () => {
+                    triggerVibration();
+                    addToCart(key);
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderMasterProducts() {
+            const listDiv = document.getElementById('productList');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            listDiv.innerHTML = '';
+
+            const keys = Object.keys(products);
+            document.getElementById('totalItems').innerText = `${keys.length} Barang`;
+
+            let count = 0;
+            keys.forEach(key => {
+                const item = products[key];
+                if (item.name.toLowerCase().includes(search) || key.toLowerCase().includes(search)) {
+                    count++;
+                    const row = document.createElement('div');
+                    row.className = "flex justify-between items-center p-2 bg-slate-50 rounded border text-xs";
+                    row.innerHTML = `
+                        <div class="overflow-hidden mr-2">
+                            <p class="font-semibold text-slate-800 truncate">${item.name}</p>
+                            <p class="text-slate-400 font-mono">${key}</p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="font-bold text-emerald-700">${formatRupiah(item.price)}</span>
+                            <button onclick="addToCart('${key}')" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs font-semibold">+ Keranjang</button>
+                            <button onclick="deleteMasterProduct('${key}')" class="text-rose-500 font-bold p-1">❌</button>
+                        </div>
+                    `;
+                    listDiv.appendChild(row);
+                }
+            });
+
+            if (count === 0) listDiv.innerHTML = `<p class="text-center text-xs text-slate-400 py-4">Belum ada data barang.</p>`;
+        }
+
+        // Init
+        renderMasterProducts();
+        renderQuickList();
+        renderCart();
+    </script>
+</body>
+</html>
             
             <!-- FITUR SCAN TEKS (OCR) DARI KAMERA / FOTO -->
             <div class="mt-3 pt-3 border-t text-center">
