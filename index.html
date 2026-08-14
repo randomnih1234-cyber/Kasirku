@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kasir Sembako Pintar</title>
+    <!-- Library -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans p-4 pb-12">
+
     <div class="max-w-md mx-auto">
         <h1 class="text-xl font-bold text-center text-emerald-700 my-2">🛒 Kasir Sembako</h1>
 
@@ -17,13 +19,15 @@
             <div class="relative overflow-hidden rounded-lg">
                 <div id="reader" class="w-full bg-black min-h-[180px]"></div>
                 <!-- Overlay Sukses -->
-                <div id="successOverlay" class="absolute inset-0 bg-emerald-950/60 backdrop-blur-[2px] flex flex-col items-center justify-center hidden z-20">
-                    <div class="bg-emerald-500 text-white p-3 rounded-full shadow-lg"><svg class="w-8 h-8 stroke-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+                <div id="successOverlay" class="absolute inset-0 bg-emerald-950/60 backdrop-blur-[2px] flex flex-col items-center justify-center hidden z-20 transition-all duration-200 opacity-0 scale-90">
+                    <div class="bg-emerald-500 text-white p-3 rounded-full shadow-lg">
+                        <svg class="w-8 h-8 stroke-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </div>
                     <span id="successText" class="text-white font-bold mt-2 text-xs">Ter-scan!</span>
                 </div>
             </div>
 
-            <!-- Status & Notifikasi Gagal -->
+            <!-- Status & Notifikasi -->
             <div class="mt-2 bg-slate-100 p-2.5 rounded-lg border text-center">
                 <p id="liveTextDisplay" class="text-xs font-bold text-slate-600">Kamera mati.</p>
                 <div id="failIndicator" class="hidden mt-1.5 pt-1.5 border-t border-slate-200 text-xs font-bold text-rose-600">❌ Tidak Ditemukan</div>
@@ -31,17 +35,20 @@
 
             <div class="flex items-center gap-2 mt-3">
                 <button onclick="startScanner()" class="flex-1 bg-emerald-600 text-white py-2 rounded-lg text-xs font-semibold">📷 Kamera</button>
-                <button onclick="toggleVoice()" class="bg-indigo-600 text-white p-2 rounded-lg text-base">🎙️</button>
+                <button id="micBtn" onclick="toggleVoice()" class="bg-indigo-600 text-white p-2 rounded-lg text-base">🎙️</button>
                 <button onclick="stopScanner()" class="flex-1 bg-rose-600 text-white py-2 rounded-lg text-xs font-semibold">🛑 Stop</button>
             </div>
             
-            <input type="text" id="manualSearchInput" onkeyup="filterManualSearch()" placeholder="🔍 Cari manual..." class="w-full mt-2 p-2 border rounded-lg text-xs bg-slate-50">
+            <input type="text" id="manualSearchInput" onkeyup="filterManualSearch()" placeholder="🔍 Cari / ketik nama barang..." class="w-full mt-2 p-2 border rounded-lg text-xs bg-slate-50 outline-emerald-500">
             <div id="searchResults" class="absolute left-4 right-4 mt-1 bg-white border rounded shadow-xl max-h-40 overflow-y-auto z-30 hidden"></div>
         </div>
 
         <!-- DAFTAR BELANJA -->
         <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-emerald-500">
-            <h2 class="text-sm font-bold mb-2">🛍️ Daftar Belanjaan</h2>
+            <div class="flex justify-between items-center mb-2 border-b pb-2">
+                <h2 class="text-sm font-bold">🛍️ Daftar Belanjaan</h2>
+                <button onclick="clearCart()" class="text-xs text-rose-600 underline">Kosongkan</button>
+            </div>
             <div id="cartList" class="space-y-2 max-h-48 overflow-y-auto mb-3 text-xs"></div>
             <div class="bg-emerald-50 p-3 rounded-lg border border-dashed border-emerald-200">
                 <div class="flex justify-between font-bold text-emerald-800"><span>Total:</span><span id="grandTotal">Rp 0</span></div>
@@ -49,17 +56,24 @@
                     <div><label>Bayar:</label><input type="text" id="paidInput" oninput="calculateChange()" class="w-full border p-1 rounded"></div>
                     <div class="text-right"><label>Kembali:</label><div id="changeOutput" class="font-bold">Rp 0</div></div>
                 </div>
+                <div class="flex gap-1 mt-2 overflow-x-auto">
+                    <button onclick="setPaidAmount('exact')" class="px-2 py-1 bg-white border rounded text-[10px]">Uang Pas</button>
+                    <button onclick="setPaidAmount(10)" class="px-2 py-1 bg-white border rounded text-[10px]">10rb</button>
+                    <button onclick="setPaidAmount(20)" class="px-2 py-1 bg-white border rounded text-[10px]">20rb</button>
+                    <button onclick="setPaidAmount(50)" class="px-2 py-1 bg-white border rounded text-[10px]">50rb</button>
+                </div>
             </div>
         </div>
 
-        <!-- INPUT BARANG -->
+        <!-- FORM TAMBAH BARANG -->
         <div class="bg-white rounded-xl shadow p-4 mb-4">
-            <h2 id="formTitle" class="text-sm font-bold mb-3">➕ Tambah Barang</h2>
+            <h2 id="formTitle" class="text-sm font-bold mb-3">➕ Simpan Harga Barang Baru</h2>
             <form id="productForm" onsubmit="saveProduct(event)" class="space-y-2 text-xs">
-                <input type="text" id="barcodeInput" placeholder="Barcode (Kosongkan jika tidak ada)" class="w-full p-2 border rounded">
+                <input type="text" id="barcodeInput" placeholder="Barcode (Opsional)" class="w-full p-2 border rounded">
                 <input type="text" id="nameInput" required placeholder="Nama Barang" class="w-full p-2 border rounded">
                 <input type="text" id="priceInput" required placeholder="Harga (4 = 4.000)" class="w-full p-2 border rounded">
-                <button class="w-full bg-slate-800 text-white p-2 rounded">Simpan</button>
+                <button id="saveBtn" class="w-full bg-slate-800 text-white p-2 rounded">Simpan</button>
+                <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden w-full bg-slate-300 text-slate-800 p-2 rounded">Batal</button>
             </form>
         </div>
 
@@ -69,95 +83,504 @@
         </div>
     </div>
 
+    <!-- PART 2: SCRIPT JAVASCRIPT & LOGIKA KASIR -->
     <script>
-        let html5QrCode = null, ocrWorker = null, isLockingScan = false;
-        let products = JSON.parse(localStorage.getItem('sembako_products')) || {};
-        let cart = {};
+        // --- VARIABEL UTAMA ---
+        let html5QrCode = null;
+        let ocrWorker = null;
+        let ocrInterval = null;
+        let isProcessingOcr = false;
+        let isLockingScan = false; // Pengunci agar tidak double scan
+        let editingKey = null;
 
+        // Data barang di LocalStorage (dengan data bawaan jika kosong)
+        let products = JSON.parse(localStorage.getItem('sembako_products')) || {
+            "INDOMILK1": { name: "Indomilk Kids Cokelat", price: 4000 },
+            "INDOMILK2": { name: "Indomilk Sachet Renteng", price: 15000 },
+            "INDOMIE": { name: "Indomie Goreng", price: 3500 }
+        };
+        let cart = {}; 
+        let lastScannedKey = null;
+        let lastScanTime = 0;
+        let lastFailTime = 0;
+        let failTimer = null;
+
+        // --- FUNGSI PINTAR: CONVERT NOMINAL HARGA / BAYAR ---
+        // Contoh: 4 -> 4000, 10.5 atau 10,5 -> 10500, 50 -> 50000
         function processAmount(val) {
-            let num = parseFloat(val.replace(',', '.'));
-            return (num > 0 && num < 1000) ? Math.round(num * 1000) : Math.round(num || 0);
+            if (!val) return 0;
+            let str = val.toString().replace(',', '.').trim();
+            let num = parseFloat(str);
+            if (isNaN(num)) return 0;
+            
+            // Angka di bawah 1000 otomatis dikalikan 1000
+            if (num > 0 && num < 1000) {
+                num = num * 1000;
+            }
+            return Math.round(num);
         }
 
-        function formatRupiah(num) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num); }
+        function formatRupiah(num) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+        }
 
+        function cleanAndFixText(text) {
+            if (!text) return "";
+            return text.toUpperCase()
+                .replace(/[\r\n]+/g, ' ')
+                .replace(/0/g, 'O')
+                .replace(/1/g, 'I')
+                .replace(/5/g, 'S')
+                .replace(/3/g, 'E')
+                .replace(/8/g, 'B')
+                .replace(/[^A-Z0-9\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function triggerVibration() {
+            if ("vibrate" in navigator) navigator.vibrate(200);
+        }
+
+        // --- HITUNG KEMBALIAN ---
+        function getGrandTotal() {
+            return Object.keys(cart).reduce((sum, key) => sum + (cart[key].price * cart[key].qty), 0);
+        }
+
+        function calculateChange() {
+            const total = getGrandTotal();
+            const paidRaw = document.getElementById('paidInput').value;
+            const paid = processAmount(paidRaw);
+            const changeOutput = document.getElementById('changeOutput');
+
+            if (paid === 0 || paidRaw === "") {
+                changeOutput.className = "font-bold text-slate-800";
+                changeOutput.innerText = "Rp 0";
+                return;
+            }
+
+            const change = paid - total;
+            if (change >= 0) {
+                changeOutput.className = "font-bold text-emerald-600";
+                changeOutput.innerText = formatRupiah(change);
+            } else {
+                changeOutput.className = "font-bold text-rose-600";
+                changeOutput.innerText = "Kurang " + formatRupiah(Math.abs(change));
+            }
+        }
+
+        function setPaidAmount(val) {
+            const total = getGrandTotal();
+            if (val === 'exact') {
+                document.getElementById('paidInput').value = total;
+            } else {
+                document.getElementById('paidInput').value = val; // Diproses oleh processAmount saat dihitung
+            }
+            calculateChange();
+        }
+
+        // --- FEEDBACK VISUAL (CENTANG HIJAU / X MERAH) ---
         function showScanFeedback(isSuccess, text) {
             if (isSuccess) {
                 const overlay = document.getElementById('successOverlay');
                 document.getElementById('successText').innerText = text;
+
                 overlay.classList.remove('hidden');
-                setTimeout(() => { overlay.classList.add('hidden'); }, 800);
+                setTimeout(() => overlay.classList.remove('opacity-0', 'scale-90'), 10);
+
+                setTimeout(() => {
+                    overlay.classList.add('opacity-0', 'scale-90');
+                    setTimeout(() => overlay.classList.add('hidden'), 200);
+                }, 800);
+
+                document.getElementById('failIndicator').classList.add('hidden');
             } else {
-                const fail = document.getElementById('failIndicator');
-                fail.classList.remove('hidden');
-                setTimeout(() => fail.classList.add('hidden'), 1500);
+                const failIndicator = document.getElementById('failIndicator');
+                failIndicator.classList.remove('hidden');
+
+                if (failTimer) clearTimeout(failTimer);
+                failTimer = setTimeout(() => {
+                    failIndicator.classList.add('hidden');
+                }, 1800);
             }
         }
 
+        // --- FITUR PENCARIAN MANUAL ---
+        function filterManualSearch() {
+            const rawQuery = document.getElementById('manualSearchInput').value;
+            const query = cleanAndFixText(rawQuery);
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '';
+
+            if (query.length === 0) {
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+
+            let matches = 0;
+            for (let key in products) {
+                const item = products[key];
+                const fullText = cleanAndFixText(key + " " + item.name);
+
+                if (fullText.includes(query) || query.split(/\s+/).some(q => q.length >= 3 && fullText.includes(q))) {
+                    matches++;
+                    const row = document.createElement('div');
+                    row.className = "p-2.5 hover:bg-emerald-50 cursor-pointer border-b last:border-b-0 flex justify-between items-center text-xs transition";
+                    row.innerHTML = `
+                        <div>
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <p class="text-[10px] text-slate-400">Kode: ${key}</p>
+                        </div>
+                        <span class="font-bold text-emerald-700">${formatRupiah(item.price)}</span>
+                    `;
+                    row.onclick = () => {
+                        addToCart(key);
+                        showScanFeedback(true, item.name);
+                        triggerVibration();
+                        document.getElementById('manualSearchInput').value = '';
+                        resultsDiv.classList.add('hidden');
+                    };
+                    resultsDiv.appendChild(row);
+                }
+            }
+
+            if (matches > 0) {
+                resultsDiv.classList.remove('hidden');
+            } else {
+                resultsDiv.innerHTML = `<div class="p-3 text-center text-slate-400 text-xs">Barang tidak ditemukan</div>`;
+                resultsDiv.classList.remove('hidden');
+            }
+        }
+
+        // --- FITUR PERINTAH SUARA (MIC) ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isListening = false;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'id-ID';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                isListening = true;
+                document.getElementById('micBtn').className = "bg-rose-600 text-white p-2 rounded-lg text-base animate-pulse transition shrink-0";
+                document.getElementById('liveTextDisplay').innerText = "🎙️ Mendengarkan suara...";
+            };
+
+            recognition.onresult = (event) => {
+                const spokenText = event.results[0][0].transcript;
+                document.getElementById('liveTextDisplay').innerText = `Suara: "${spokenText}"`;
+                matchAndAddToCart(spokenText, true);
+            };
+
+            recognition.onerror = () => {
+                document.getElementById('liveTextDisplay').innerText = "⚠️ Suara tidak terdeteksi.";
+                showScanFeedback(false, "Suara Tidak Terdeteksi");
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                document.getElementById('micBtn').className = "bg-indigo-600 text-white p-2 rounded-lg text-base hover:bg-indigo-700 transition shrink-0";
+            };
+        }
+
+        function toggleVoice() {
+            if (!SpeechRecognition) {
+                alert("Browser HP Anda belum mendukung input suara.");
+                return;
+            }
+            if (isListening) recognition.stop();
+            else recognition.start();
+        }
+
+        // --- PENCOCOKAN BARANG (KAMERA & SUARA) ---
+        function matchAndAddToCart(inputText, isExplicitAction = false) {
+            const cleanInput = cleanAndFixText(inputText);
+            if (cleanInput.length < 2) return;
+
+            let matchedKeys = [];
+
+            for (let key in products) {
+                const item = products[key];
+                const fullTargetText = cleanAndFixText(key + " " + item.name);
+                const inputWords = cleanInput.split(/\s+/).filter(w => w.length >= 3);
+                const targetWords = fullTargetText.split(/\s+/).filter(w => w.length >= 3);
+
+                let isMatch = false;
+                if (cleanInput.includes(fullTargetText) || fullTargetText.includes(cleanInput)) {
+                    isMatch = true;
+                } else {
+                    for (let inW of inputWords) {
+                        for (let tarW of targetWords) {
+                            if (tarW.includes(inW) || inW.includes(tarW)) {
+                                isMatch = true;
+                                break;
+                            }
+                        }
+                        if (isMatch) break;
+                    }
+                }
+
+                if (isMatch) matchedKeys.push(key);
+            }
+
+            if (matchedKeys.length === 1) {
+                const key = matchedKeys[0];
+                showScanFeedback(true, products[key].name);
+                triggerVibration();
+                addToCart(key);
+            } else if (matchedKeys.length > 1) {
+                document.getElementById('manualSearchInput').value = inputText.trim();
+                filterManualSearch();
+                document.getElementById('liveTextDisplay').innerText = `⚠️ Pilih varian untuk "${inputText}" di bawah`;
+                triggerVibration();
+            } else if (isExplicitAction) {
+                showScanFeedback(false, `Tidak Ditemukan`);
+            } else {
+                const now = Date.now();
+                if (now - lastFailTime > 2500) {
+                    lastFailTime = now;
+                    showScanFeedback(false, "Tidak Ditemukan");
+                }
+            }
+        }
+
+        // --- KAMERA & SCANNER BARCODE ---
+        async function startScanner() {
+            if (html5QrCode && html5QrCode.isScanning) return;
+            document.getElementById('liveTextDisplay').innerText = "Menyiapkan kamera...";
+
+            if (!ocrWorker) {
+                try { ocrWorker = await Tesseract.createWorker('ind'); } catch(e) {}
+            }
+
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 220, height: 140 } },
+                (barcode) => handleDetectedKey(barcode),
+                () => {}
+            ).then(() => {
+                document.getElementById('liveTextDisplay').innerText = "Kamera aktif, arahkan ke barang...";
+                ocrInterval = setInterval(processLiveFrameOCR, 1500);
+            }).catch(err => {
+                document.getElementById('liveTextDisplay').innerText = "Gagal membuka kamera.";
+            });
+        }
+
+        function stopScanner() {
+            if (ocrInterval) clearInterval(ocrInterval);
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById("reader").innerHTML = "";
+                    document.getElementById('liveTextDisplay').innerText = "Kamera mati.";
+                    document.getElementById('failIndicator').classList.add('hidden');
+                });
+            }
+        }
+
+        async function processLiveFrameOCR() {
+            if (isProcessingOcr || !ocrWorker) return;
+            const videoElement = document.querySelector("#reader video");
+            if (!videoElement || videoElement.readyState !== 4) return;
+
+            isProcessingOcr = true;
+            try {
+                const canvas = document.createElement("canvas");
+                canvas.width = videoElement.videoWidth / 2;
+                canvas.height = videoElement.videoHeight / 2;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                const result = await ocrWorker.recognize(canvas);
+                const cleanOcr = cleanAndFixText(result.data.text);
+
+                if (cleanOcr.length > 0) {
+                    document.getElementById('liveTextDisplay').innerText = cleanOcr.substring(0, 30);
+                    matchAndAddToCart(cleanOcr, false);
+                }
+            } catch (e) {
+                console.error("OCR Error:", e);
+            } finally {
+                isProcessingOcr = false;
+            }
+        }
+
+        // --- PENANGANAN BARCODE DENGAN SISTEM ANTI-DOUBLE SCAN ---
+        function handleDetectedKey(key) {
+            if (isLockingScan) return; // Mencegah scan beruntun / dobel
+
+            const now = Date.now();
+            if (key === lastScannedKey && (now - lastScanTime) < 2000) return;
+
+            lastScannedKey = key;
+            lastScanTime = now;
+
+            if (products[key]) {
+                isLockingScan = true;
+                showScanFeedback(true, products[key].name);
+                triggerVibration();
+                addToCart(key);
+                // Buka kunci setelah 2 detik
+                setTimeout(() => { isLockingScan = false; }, 2000);
+            } else {
+                showScanFeedback(false, "Barcode Tidak Ditemukan");
+            }
+        }
+
+        // --- MANAJEMEN KERANJANG ---
         function addToCart(key) {
-            if (cart[key]) cart[key].qty += 1;
-            else cart[key] = { name: products[key].name, price: products[key].price, qty: 1 };
+            if (!products[key]) return;
+            if (cart[key]) {
+                cart[key].qty += 1;
+            } else {
+                cart[key] = { name: products[key].name, price: products[key].price, qty: 1 };
+            }
+            renderCart();
+        }
+
+        function updateQty(key, change) {
+            if (cart[key]) {
+                cart[key].qty += change;
+                if (cart[key].qty <= 0) delete cart[key];
+                renderCart();
+            }
+        }
+
+        function removeFromCart(key) {
+            delete cart[key];
+            renderCart();
+        }
+
+        function clearCart() {
+            cart = {};
+            document.getElementById('paidInput').value = '';
             renderCart();
         }
 
         function renderCart() {
-            const list = document.getElementById('cartList');
-            list.innerHTML = Object.keys(cart).map(k => `
-                <div class="flex justify-between items-center p-2 bg-slate-50 border rounded">
-                    <div>${cart[k].name} (${cart[k].qty}x)</div>
-                    <div class="flex gap-2"><button onclick="updateQty('${k}',-1)" class="px-2 bg-slate-200 rounded">-</button><button onclick="updateQty('${k}',1)" class="px-2 bg-slate-200 rounded">+</button><button onclick="delete cart['${k}']; renderCart()" class="text-rose-500">❌</button></div>
-                </div>`).join('');
-            document.getElementById('grandTotal').innerText = formatRupiah(Object.keys(cart).reduce((sum, k) => sum + (cart[k].price * cart[k].qty), 0));
+            const cartList = document.getElementById('cartList');
+            const keys = Object.keys(cart);
+            cartList.innerHTML = '';
+
+            if (keys.length === 0) {
+                cartList.innerHTML = `<p class="text-center text-slate-400 py-3">Scan camera, sebut nama (mic), atau ketik manual.</p>`;
+            } else {
+                keys.forEach(key => {
+                    const item = cart[key];
+                    const subtotal = item.price * item.qty;
+                    cartList.innerHTML += `
+                        <div class="flex justify-between items-center p-2 bg-slate-50 rounded border">
+                            <div class="flex-1 pr-2">
+                                <p class="font-bold text-slate-800">${item.name}</p>
+                                <p class="text-[11px] text-slate-500">${formatRupiah(item.price)} x ${item.qty} = <span class="font-semibold text-emerald-700">${formatRupiah(subtotal)}</span></p>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button onclick="updateQty('${key}', -1)" class="w-6 h-6 bg-slate-200 text-slate-700 font-bold rounded text-xs hover:bg-slate-300">-</button>
+                                <span class="w-6 text-center font-bold text-xs">${item.qty}</span>
+                                <button onclick="updateQty('${key}', 1)" class="w-6 h-6 bg-slate-200 text-slate-700 font-bold rounded text-xs hover:bg-slate-300">+</button>
+                                <button onclick="removeFromCart('${key}')" title="Hapus" class="ml-1 text-rose-500 hover:text-rose-700 font-bold text-xs p-1">❌</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('grandTotal').innerText = formatRupiah(getGrandTotal());
             calculateChange();
         }
 
-        function updateQty(k, change) { cart[k].qty += change; if(cart[k].qty <= 0) delete cart[k]; renderCart(); }
-        function calculateChange() {
-            const total = Object.keys(cart).reduce((sum, k) => sum + (cart[k].price * cart[k].qty), 0);
-            const paid = processAmount(document.getElementById('paidInput').value);
-            const change = paid - total;
-            document.getElementById('changeOutput').innerText = paid > 0 ? formatRupiah(change >= 0 ? change : 0) : "Rp 0";
+        // --- MANAJEMEN ETALASE & PENYIMPANAN BARANG (BARCODE OPSIONAL) ---
+        function saveProduct(e) {
+            e.preventDefault();
+            let key = document.getElementById('barcodeInput').value.trim().toUpperCase();
+            const name = document.getElementById('nameInput').value.trim();
+            const rawPrice = document.getElementById('priceInput').value;
+            const price = processAmount(rawPrice);
+
+            if (!name || price === 0) {
+                alert("Mohon isi nama dan harga barang dengan benar.");
+                return;
+            }
+
+            // JIKA BARCODE KOSONG: Buatkan Kode Unik Otomatis
+            if (!key) {
+                key = editingKey ? editingKey : "MANUAL_" + Date.now();
+            }
+
+            if (editingKey && editingKey !== key) {
+                delete products[editingKey];
+            }
+
+            products[key] = { name: name, price: price };
+            localStorage.setItem('sembako_products', JSON.stringify(products));
+
+            cancelEdit();
+            renderEtalase();
+            alert(`Berhasil menyimpan ${name} (${formatRupiah(price)})`);
         }
 
-        function handleDetectedKey(key) {
-            if (isLockingScan) return;
-            if (products[key]) {
-                isLockingScan = true;
-                addToCart(key);
-                showScanFeedback(true, products[key].name);
-                setTimeout(() => isLockingScan = false, 2000);
-            } else {
-                showScanFeedback(false);
+        function editProduct(key) {
+            editingKey = key;
+            const item = products[key];
+
+            document.getElementById('barcodeInput').value = key.startsWith("MANUAL_") ? "" : key;
+            document.getElementById('nameInput').value = item.name;
+            document.getElementById('priceInput').value = item.price;
+
+            document.getElementById('formTitle').innerText = "✏️ Edit Barang Etalase";
+            document.getElementById('saveBtn').innerText = "💾 Simpan Perubahan";
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editingKey = null;
+            document.getElementById('productForm').reset();
+            document.getElementById('formTitle').innerText = "➕ Simpan Harga Barang Baru";
+            document.getElementById('saveBtn').innerText = "💾 Simpan Harga";
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+        }
+
+        function deleteProduct(key) {
+            if (confirm(`Hapus "${products[key].name}" dari etalase?`)) {
+                delete products[key];
+                localStorage.setItem('sembako_products', JSON.stringify(products));
+                renderEtalase();
             }
         }
 
-        async function startScanner() {
-            html5QrCode = new Html5Qrcode("reader");
-            await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, handleDetectedKey);
-            document.getElementById('liveTextDisplay').innerText = "Kamera aktif.";
-        }
-
-        function stopScanner() {
-            if (html5QrCode) html5QrCode.stop().then(() => { document.getElementById("reader").innerHTML = ""; document.getElementById('liveTextDisplay').innerText = "Kamera mati."; });
-        }
-
-        function saveProduct(e) {
-            e.preventDefault();
-            let key = document.getElementById('barcodeInput').value.trim().toUpperCase() || ("M_" + Date.now());
-            products[key] = { name: document.getElementById('nameInput').value, price: processAmount(document.getElementById('priceInput').value) };
-            localStorage.setItem('sembako_products', JSON.stringify(products));
-            alert("Tersimpan!"); renderEtalase();
-        }
-
         function renderEtalase() {
-            document.getElementById('etalaseList').innerHTML = Object.keys(products).map(k => `
-                <div class="flex justify-between p-2 border rounded">
-                    <span>${products[k].name}</span>
-                    <button onclick="delete products['${k}']; localStorage.setItem('sembako_products', JSON.stringify(products)); renderEtalase()" class="text-rose-500">🗑️</button>
-                </div>`).join('');
+            const listDiv = document.getElementById('etalaseList');
+            const keys = Object.keys(products);
+            listDiv.innerHTML = '';
+
+            if (keys.length === 0) {
+                listDiv.innerHTML = `<p class="text-center text-slate-400 py-3">Belum ada barang di etalase.</p>`;
+                return;
+            }
+
+            keys.forEach(key => {
+                const item = products[key];
+                const displayKey = key.startsWith("MANUAL_") ? "Tanpa Barcode" : key;
+                listDiv.innerHTML += `
+                    <div class="flex justify-between items-center p-2.5 bg-slate-50 border rounded-lg">
+                        <div class="overflow-hidden mr-2">
+                            <p class="font-bold text-slate-800 truncate">${item.name}</p>
+                            <p class="text-[10px] text-slate-400 font-mono">Kode: ${displayKey} | <span class="font-semibold text-emerald-700">${formatRupiah(item.price)}</span></p>
+                        </div>
+                        <div class="flex gap-1 shrink-0">
+                            <button onclick="editProduct('${key}')" class="px-2 py-1 bg-amber-100 text-amber-800 rounded font-semibold text-[10px] hover:bg-amber-200">✏️ Edit</button>
+                            <button onclick="deleteProduct('${key}')" class="px-2 py-1 bg-rose-100 text-rose-700 rounded font-semibold text-[10px] hover:bg-rose-200">🗑️ Hapus</button>
+                        </div>
+                    </div>
+                `;
+            });
         }
 
-        // Voice & Manual search tetap sama seperti logika sebelumnya
+        // Inisialisasi awal saat aplikasi dibuka
+        renderCart();
         renderEtalase();
     </script>
 </body>
