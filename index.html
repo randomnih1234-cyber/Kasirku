@@ -995,15 +995,21 @@
         }
 
         function stopScanner() {
-            if (ocrInterval) clearInterval(ocrInterval);
-            if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => {
-                    document.getElementById("reader").innerHTML = "";
-                    document.getElementById('liveTextDisplay').innerText = "Kamera mati.";
-                    document.getElementById('failIndicator').classList.add('hidden');
-                });
-            }
-        }
+    if (ocrInterval) clearInterval(ocrInterval);
+    if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+            document.getElementById("reader").innerHTML = "";
+            document.getElementById('liveTextDisplay').innerText = "Kamera mati.";
+            document.getElementById('failIndicator').classList.add('hidden');
+            
+            // --- INI DUA BARIS YANG DITAMBAHKAN ---
+            document.getElementById('manualSearchInput').value = ""; 
+            document.getElementById('searchResults').classList.add('hidden'); 
+            // ---------------------------------------
+        });
+    }
+}
+
 
         async function processLiveFrameOCR() {
             if (isProcessingOcr || !ocrWorker) return;
