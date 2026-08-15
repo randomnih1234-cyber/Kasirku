@@ -74,15 +74,20 @@
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-xs font-semibold">
-                    ⚡ POS v3.0 (AI Live Scan)
-                </span>
+            
+            <!-- NAVIGASI TAB UTAMA -->
+            <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+                <button id="tabKasirBtn" onclick="switchTab('kasir')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white shadow-xs">
+                    🛒 Kasir & Cek Harga
+                </button>
+                <button id="tabKalkulatorBtn" onclick="switchTab('kalkulator')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+                    🧮 Kalkulator Modal
+                </button>
             </div>
         </header>
 
-        <!-- MAIN DASHBOARD GRID -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <!-- TAB 1: HALAMAN KASIR & CEK HARGA -->
+        <div id="pageKasir" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
             <!-- LEFT COLUMN: SCANNER & CART -->
             <div class="lg:col-span-6 space-y-4">
@@ -306,6 +311,55 @@
 
         </div>
 
+        <!-- TAB 2: HALAMAN KALKULATOR MODAL & HARGA JUAL -->
+        <div id="pageKalkulator" class="hidden max-w-2xl mx-auto bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center gap-2.5 border-b border-slate-100 pb-3">
+                <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg">🧮</div>
+                <div>
+                    <h2 class="text-sm font-bold text-slate-800">Kalkulator Modal Kulakan</h2>
+                    <p class="text-[11px] text-slate-400">Hitung modal eceran per pcs dari belanja dus/bal agar untung maksimal</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Total Harga Kulakan (Rp):</label>
+                    <input type="number" id="calcTotalCost" oninput="calculateProfit()" placeholder="Contoh: 120000 (1 Dus)" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Jumlah Isi dalam Dus/Bal (Pcs):</label>
+                    <input type="number" id="calcItemQty" oninput="calculateProfit()" placeholder="Contoh: 40" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Target Keuntungan per Pcs (Rp):</label>
+                    <input type="number" id="calcProfitPerItem" oninput="calculateProfit('nominal')" placeholder="Contoh: 500" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Atau Persen Margin (%):</label>
+                    <input type="number" id="calcProfitPercent" oninput="calculateProfit('percent')" placeholder="Contoh: 10" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
+                </div>
+            </div>
+
+            <!-- HASIL PERHITUNGAN -->
+            <div class="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200/80 rounded-xl p-4 space-y-2 text-xs">
+                <div class="flex justify-between items-center text-slate-600">
+                    <span>Modal Bersih per Pcs:</span>
+                    <span id="resModalPerItem" class="font-bold text-slate-900">Rp 0</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-600">
+                    <span>Total Keuntungan 1 Dus/Bal:</span>
+                    <span id="resTotalProfit" class="font-bold text-emerald-600">Rp 0</span>
+                </div>
+                <div class="flex justify-between items-center border-t border-purple-200/60 pt-2 font-extrabold text-slate-900 text-sm">
+                    <span>Rekomendasi Harga Jual / Pcs:</span>
+                    <span id="resSellingPrice" class="text-purple-700 text-base">Rp 0</span>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- LOGIKA JAVASCRIPT LENGKAP -->
@@ -330,6 +384,58 @@
         let lastFailTime = 0;
         let failTimer = null;
 
+        // LOGIKA SWITCH TAB HALAMAN
+        function switchTab(tabName) {
+            const pageKasir = document.getElementById('pageKasir');
+            const pageKalkulator = document.getElementById('pageKalkulator');
+            const btnKasir = document.getElementById('tabKasirBtn');
+            const btnKalkulator = document.getElementById('tabKalkulatorBtn');
+
+            if (tabName === 'kasir') {
+                pageKasir.classList.remove('hidden');
+                pageKalkulator.classList.add('hidden');
+                btnKasir.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white shadow-xs";
+                btnKalkulator.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900";
+            } else {
+                pageKasir.classList.add('hidden');
+                pageKalkulator.classList.remove('hidden');
+                btnKalkulator.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-purple-600 text-white shadow-xs";
+                btnKasir.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900";
+            }
+        }
+
+        // LOGIKA KALKULATOR MODAL & KEUNTUNGAN
+        function calculateProfit(mode = 'nominal') {
+            const totalCost = parseFloat(document.getElementById('calcTotalCost').value) || 0;
+            const itemQty = parseFloat(document.getElementById('calcItemQty').value) || 0;
+            let profitPerItem = parseFloat(document.getElementById('calcProfitPerItem').value) || 0;
+            let profitPercent = parseFloat(document.getElementById('calcProfitPercent').value) || 0;
+
+            if (totalCost <= 0 || itemQty <= 0) {
+                document.getElementById('resModalPerItem').innerText = "Rp 0";
+                document.getElementById('resTotalProfit').innerText = "Rp 0";
+                document.getElementById('resSellingPrice').innerText = "Rp 0";
+                return;
+            }
+
+            const modalPerItem = totalCost / itemQty;
+
+            if (mode === 'percent' && profitPercent > 0) {
+                profitPerItem = modalPerItem * (profitPercent / 100);
+                document.getElementById('calcProfitPerItem').value = Math.round(profitPerItem);
+            } else if (mode === 'nominal' && modalPerItem > 0 && profitPerItem > 0) {
+                profitPercent = (profitPerItem / modalPerItem) * 100;
+                document.getElementById('calcProfitPercent').value = profitPercent.toFixed(1);
+            }
+
+            const sellingPrice = modalPerItem + profitPerItem;
+            const totalProfit = profitPerItem * itemQty;
+
+            document.getElementById('resModalPerItem').innerText = formatRupiah(modalPerItem);
+            document.getElementById('resTotalProfit').innerText = formatRupiah(totalProfit);
+            document.getElementById('resSellingPrice').innerText = formatRupiah(Math.ceil(sellingPrice / 500) * 500);
+        }
+
         function openCamera() {
             setImageTab('CAMERA');
             const camInput = document.getElementById('cameraInput');
@@ -342,23 +448,20 @@
             const videoElement = document.querySelector("#reader video");
             const liveText = document.getElementById('liveTextDisplay');
             
-            // 1. Cek apakah kamera live sedang menyala
             if (!html5QrCode || !html5QrCode.isScanning || !videoElement || videoElement.readyState !== 4) {
                 if (liveText) liveText.innerText = "📷 Menyalakan kamera live...";
                 await startScanner();
                 
-                // Beri waktu 1.2 detik agar kamera siap
                 setTimeout(() => {
                     triggerAIScan();
                 }, 1200);
                 return;
             }
 
-            // 2. Ambil snapshot frame langsung dari kamera live
             if (liveText) liveText.innerText = "🤖 Mengambil gambar & mengenali dengan Gemini AI...";
             
             const canvas = document.createElement("canvas");
-            const maxDim = 400; // Ukuran ideal analisis AI
+            const maxDim = 400; 
             let width = videoElement.videoWidth;
             let height = videoElement.videoHeight;
             
@@ -417,7 +520,7 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    const maxDim = 120; // 120px super hemat Google Drive
+                    const maxDim = 120;
                     let width = img.width;
                     let height = img.height;
                     
@@ -995,21 +1098,19 @@
         }
 
         function stopScanner() {
-    if (ocrInterval) clearInterval(ocrInterval);
-    if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
-            document.getElementById("reader").innerHTML = "";
-            document.getElementById('liveTextDisplay').innerText = "Kamera mati.";
-            document.getElementById('failIndicator').classList.add('hidden');
-            
-            // --- INI DUA BARIS YANG DITAMBAHKAN ---
-            document.getElementById('manualSearchInput').value = ""; 
-            document.getElementById('searchResults').classList.add('hidden'); 
-            // ---------------------------------------
-        });
-    }
-}
-
+            if (ocrInterval) clearInterval(ocrInterval);
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById("reader").innerHTML = "";
+                    document.getElementById('liveTextDisplay').innerText = "Kamera mati.";
+                    document.getElementById('failIndicator').classList.add('hidden');
+                    
+                    // Membersihkan sisa hasil pencarian otomatis
+                    document.getElementById('manualSearchInput').value = ""; 
+                    document.getElementById('searchResults').classList.add('hidden'); 
+                });
+            }
+        }
 
         async function processLiveFrameOCR() {
             if (isProcessingOcr || !ocrWorker) return;
