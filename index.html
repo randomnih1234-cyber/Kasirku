@@ -324,22 +324,26 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
                     <label class="block font-semibold text-slate-600 mb-1">Total Harga Kulakan (Rp):</label>
-                    <input type="number" id="calcTotalCost" oninput="calculateProfit()" placeholder="Contoh: 120000 (1 Dus)" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
+                    <input type="text" id="calcTotalCost" oninput="calculateProfit('cost')" placeholder="Contoh: 19000 atau 19.000" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
                 </div>
                 <div>
                     <label class="block font-semibold text-slate-600 mb-1">Jumlah Isi dalam Dus/Bal (Pcs):</label>
-                    <input type="number" id="calcItemQty" oninput="calculateProfit()" placeholder="Contoh: 40" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
+                    <input type="number" id="calcItemQty" oninput="calculateProfit('qty')" placeholder="Contoh: 24" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                 <div>
-                    <label class="block font-semibold text-slate-600 mb-1">Target Keuntungan per Pcs (Rp):</label>
-                    <input type="number" id="calcProfitPerItem" oninput="calculateProfit('nominal')" placeholder="Contoh: 500" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
+                    <label class="block font-semibold text-slate-600 mb-1">Target Untung / Pcs (Rp):</label>
+                    <input type="text" id="calcProfitPerItem" oninput="calculateProfit('nominal')" placeholder="Contoh: 500" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
                 </div>
                 <div>
-                    <label class="block font-semibold text-slate-600 mb-1">Atau Persen Margin (%):</label>
-                    <input type="number" id="calcProfitPercent" oninput="calculateProfit('percent')" placeholder="Contoh: 10" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
+                    <label class="block font-semibold text-slate-600 mb-1">Atau Margin (%):</label>
+                    <input type="text" id="calcProfitPercent" oninput="calculateProfit('percent')" placeholder="Contoh: 10" class="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-purple-500/20">
+                </div>
+                <div>
+                    <label class="block font-bold text-purple-700 mb-1">💡 Tes Harga Jual Kamu (Rp):</label>
+                    <input type="text" id="calcCustomPrice" oninput="calculateProfit('custom')" placeholder="Contoh: 1000 atau 1" class="w-full p-2.5 border border-purple-300 rounded-xl font-bold bg-purple-50/70 text-purple-900 outline-none focus:ring-2 focus:ring-purple-500/30">
                 </div>
             </div>
 
@@ -354,8 +358,14 @@
                     <span id="resTotalProfit" class="font-bold text-emerald-600">Rp 0</span>
                 </div>
                 <div class="flex justify-between items-center border-t border-purple-200/60 pt-2 font-extrabold text-slate-900 text-sm">
-                    <span>Rekomendasi Harga Jual / Pcs:</span>
+                    <span>Rekomendasi Harga Jual:</span>
                     <span id="resSellingPrice" class="text-purple-700 text-base">Rp 0</span>
+                </div>
+                
+                <!-- HASIL TES HARGA MANUAL -->
+                <div class="flex justify-between items-center border-t border-dashed border-purple-200/80 pt-2 text-xs">
+                    <span class="font-bold text-slate-700">Hasil Tes Harga Kamu:</span>
+                    <span id="resCustomResult" class="font-extrabold text-slate-400">Ketik harga tes di atas</span>
                 </div>
             </div>
         </div>
@@ -404,23 +414,41 @@
             }
         }
 
+        // PEMROSESAN ANGKA (SUPPORT FORMAT TITIK DAN SINGKATAN RIBUAN)
+        function processAmount(val) {
+            if (!val) return 0;
+            let str = val.toString().replace(/\./g, '').replace(',', '.').trim();
+            let num = parseFloat(str);
+            if (isNaN(num)) return 0;
+            if (num > 0 && num < 1000) num = num * 1000;
+            return Math.round(num);
+        }
+
         // LOGIKA KALKULATOR MODAL & KEUNTUNGAN
         function calculateProfit(mode = 'nominal') {
-            const totalCost = parseFloat(document.getElementById('calcTotalCost').value) || 0;
+            const totalCost = processAmount(document.getElementById('calcTotalCost').value);
             const itemQty = parseFloat(document.getElementById('calcItemQty').value) || 0;
-            let profitPerItem = parseFloat(document.getElementById('calcProfitPerItem').value) || 0;
-            let profitPercent = parseFloat(document.getElementById('calcProfitPercent').value) || 0;
+            let profitPerItem = processAmount(document.getElementById('calcProfitPerItem').value);
+            let profitPercent = parseFloat(document.getElementById('calcProfitPercent').value.replace(',', '.')) || 0;
+            const customPrice = processAmount(document.getElementById('calcCustomPrice').value);
 
             if (totalCost <= 0 || itemQty <= 0) {
                 document.getElementById('resModalPerItem').innerText = "Rp 0";
                 document.getElementById('resTotalProfit').innerText = "Rp 0";
                 document.getElementById('resSellingPrice').innerText = "Rp 0";
+                document.getElementById('resCustomResult').className = "font-bold text-slate-400";
+                document.getElementById('resCustomResult').innerText = "Isi modal & qty dulu";
                 return;
             }
 
             const modalPerItem = totalCost / itemQty;
 
-            if (mode === 'percent' && profitPercent > 0) {
+            if (mode === 'custom' && customPrice > 0) {
+                profitPerItem = customPrice - modalPerItem;
+                profitPercent = (profitPerItem / modalPerItem) * 100;
+                document.getElementById('calcProfitPerItem').value = Math.round(profitPerItem);
+                document.getElementById('calcProfitPercent').value = profitPercent.toFixed(1);
+            } else if (mode === 'percent' && profitPercent > 0) {
                 profitPerItem = modalPerItem * (profitPercent / 100);
                 document.getElementById('calcProfitPerItem').value = Math.round(profitPerItem);
             } else if (mode === 'nominal' && modalPerItem > 0 && profitPerItem > 0) {
@@ -434,6 +462,24 @@
             document.getElementById('resModalPerItem').innerText = formatRupiah(modalPerItem);
             document.getElementById('resTotalProfit').innerText = formatRupiah(totalProfit);
             document.getElementById('resSellingPrice').innerText = formatRupiah(Math.ceil(sellingPrice / 500) * 500);
+
+            // ANALISIS TES HARGA JUAL MANUAL
+            const customResultElem = document.getElementById('resCustomResult');
+            if (customPrice > 0) {
+                const diffPerItem = customPrice - modalPerItem;
+                const diffTotal = diffPerItem * itemQty;
+
+                if (diffPerItem >= 0) {
+                    customResultElem.className = "font-extrabold text-emerald-600 text-xs";
+                    customResultElem.innerText = `+${formatRupiah(diffPerItem)}/pcs (Untung ${formatRupiah(diffTotal)}/dus)`;
+                } else {
+                    customResultElem.className = "font-extrabold text-rose-600 text-xs";
+                    customResultElem.innerText = `-${formatRupiah(Math.abs(diffPerItem))}/pcs (Rugi ${formatRupiah(Math.abs(diffTotal))}/dus)`;
+                }
+            } else {
+                customResultElem.className = "font-bold text-slate-400";
+                customResultElem.innerText = "Ketik harga tes di atas";
+            }
         }
 
         function openCamera() {
@@ -704,15 +750,6 @@
                 }
             }
             return null;
-        }
-
-        function processAmount(val) {
-            if (!val) return 0;
-            let str = val.toString().replace(',', '.').trim();
-            let num = parseFloat(str);
-            if (isNaN(num)) return 0;
-            if (num > 0 && num < 1000) num = num * 1000;
-            return Math.round(num);
         }
 
         function formatRupiah(num) {
@@ -1105,7 +1142,7 @@
                     document.getElementById('liveTextDisplay').innerText = "Kamera mati.";
                     document.getElementById('failIndicator').classList.add('hidden');
                     
-                    // Membersihkan sisa hasil pencarian otomatis
+                    // Membersihkan sisa hasil pencarian otomatis saat stop
                     document.getElementById('manualSearchInput').value = ""; 
                     document.getElementById('searchResults').classList.add('hidden'); 
                 });
