@@ -76,7 +76,7 @@
             </div>
             <div class="flex items-center gap-2">
                 <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-xs font-semibold">
-                    ⚡ POS v3.0 (AI Powered)
+                    ⚡ POS v3.0 (AI Live Scan)
                 </span>
             </div>
         </header>
@@ -91,7 +91,7 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 relative">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                            <span>📷</span> Scanner Barcode, OCR & AI
+                            <span>📷</span> Scanner Barcode, OCR & AI Live
                         </h2>
                         <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">Auto Scan</span>
                     </div>
@@ -128,7 +128,7 @@
                             <span>📷</span> Scan Barcode
                         </button>
                         <button onclick="triggerAIScan()" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1">
-                            <span>✨</span> Scan AI
+                            <span>✨</span> Scan AI (Live)
                         </button>
                         <button id="micBtn" onclick="toggleVoice()" title="Input Suara" class="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white p-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-600/20 active:scale-[0.98] transition-all flex items-center justify-center shrink-0">
                             🎙️
@@ -247,7 +247,7 @@
 
                         <!-- SECTION FOTO PRODUK -->
                         <div class="space-y-2 border-t border-slate-100 pt-2">
-                            <label class="block text-[11px] font-bold text-slate-700">🖼️ Foto Produk (Pilih Sumber Foto):</label>
+                            <label class="block text-[11px] font-bold text-slate-700">🖼️ Foto Produk Etalase:</label>
                             
                             <div class="grid grid-cols-3 gap-1.5 text-[11px]">
                                 <button type="button" id="imgTabCameraBtn" onclick="openCamera()" class="py-2 px-1 rounded-xl font-bold border text-center transition bg-slate-800 text-white truncate shadow-xs">📷 Kamera</button>
@@ -334,22 +334,55 @@
             setImageTab('CAMERA');
             const camInput = document.getElementById('cameraInput');
             camInput.value = "";
-            camInput.dataset.mode = "";
             camInput.click();
         }
 
-        function triggerAIScan() {
-            const camInput = document.getElementById('cameraInput');
-            camInput.value = "";
-            camInput.dataset.mode = "AI_SCAN"; // Set flag mode AI
-            camInput.click();
+        // AKSI SCAN AI LANGSUNG DARI STREAM VIDEO LIVE
+        async function triggerAIScan() {
+            const videoElement = document.querySelector("#reader video");
+            const liveText = document.getElementById('liveTextDisplay');
+            
+            // 1. Cek apakah kamera live sedang menyala
+            if (!html5QrCode || !html5QrCode.isScanning || !videoElement || videoElement.readyState !== 4) {
+                if (liveText) liveText.innerText = "📷 Menyalakan kamera live...";
+                await startScanner();
+                
+                // Beri waktu 1.2 detik agar kamera siap
+                setTimeout(() => {
+                    triggerAIScan();
+                }, 1200);
+                return;
+            }
+
+            // 2. Ambil snapshot frame langsung dari kamera live
+            if (liveText) liveText.innerText = "🤖 Mengambil gambar & mengenali dengan Gemini AI...";
+            
+            const canvas = document.createElement("canvas");
+            const maxDim = 400; // Ukuran ideal analisis AI
+            let width = videoElement.videoWidth;
+            let height = videoElement.videoHeight;
+            
+            if (width > height && width > maxDim) {
+                height *= maxDim / width;
+                width = maxDim;
+            } else if (height > maxDim) {
+                width *= maxDim / height;
+                height = maxDim;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(videoElement, 0, 0, width, height);
+
+            const base64Data = canvas.toDataURL('image/jpeg', 0.7);
+            await processImageWithAI(base64Data);
         }
 
         function openGallery() {
             setImageTab('UPLOAD');
             const galInput = document.getElementById('galleryInput');
             galInput.value = "";
-            galInput.dataset.mode = "";
             galInput.click();
         }
 
@@ -377,17 +410,14 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            const isAIMode = event.target.dataset.mode === "AI_SCAN";
-            event.target.dataset.mode = ""; // Reset mode flag
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
-                img.onload = async function() {
+                img.onload = function() {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    const maxDim = isAIMode ? 400 : 120; // AI butuh detail 400px, Etalase cukup 120px hemat Drive
+                    const maxDim = 120; // 120px super hemat Google Drive
                     let width = img.width;
                     let height = img.height;
                     
@@ -403,14 +433,8 @@
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    const base64Data = canvas.toDataURL('image/jpeg', isAIMode ? 0.7 : 0.5);
-
-                    if (isAIMode) {
-                        await processImageWithAI(base64Data);
-                    } else {
-                        currentImageData = base64Data;
-                        updatePreview(currentImageData, `Foto Siap (Versi Hemat)`);
-                    }
+                    currentImageData = canvas.toDataURL('image/jpeg', 0.5);
+                    updatePreview(currentImageData, `Foto Siap (Versi Hemat)`);
                 };
                 img.src = e.target.result;
             };
@@ -419,7 +443,6 @@
 
         async function processImageWithAI(base64Image) {
             const liveText = document.getElementById('liveTextDisplay');
-            if (liveText) liveText.innerText = "🤖 Gemini AI sedang mengenali produk...";
 
             const catalog = {};
             for (let id in products) {
@@ -1075,7 +1098,7 @@
                     <div class="text-center py-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                         <span class="text-2xl block mb-1">🛒</span>
                         <p class="text-slate-400 font-medium">Keranjang masih kosong</p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">Scan barcode, AI foto, sebut nama (mic), atau cari manual.</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Scan barcode, AI Live, sebut nama (mic), atau cari manual.</p>
                     </div>
                 `;
             } else {
