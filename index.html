@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Sembako Pintar</title>
-    <!-- Library -->
+    <title>Kasir Sembako Pintar - Online Google Sheets</title>
+    <!-- Library CDN -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -29,7 +29,7 @@
 
             <!-- Status & Notifikasi -->
             <div class="mt-2 bg-slate-100 p-2.5 rounded-lg border text-center">
-                <p id="liveTextDisplay" class="text-xs font-bold text-slate-600">Kamera mati.</p>
+                <p id="liveTextDisplay" class="text-xs font-bold text-slate-600">Memuat sistem...</p>
                 <div id="failIndicator" class="hidden mt-1.5 pt-1.5 border-t border-slate-200 text-xs font-bold text-rose-600">❌ Tidak Ditemukan</div>
             </div>
 
@@ -70,7 +70,7 @@
             <h2 id="formTitle" class="text-sm font-bold mb-3 text-slate-800">➕ Simpan / Tautkan Barcode Barang</h2>
             <form id="productForm" onsubmit="saveProduct(event)" class="space-y-3 text-xs">
                 
-                <!-- TOMBOL TOGGLE MODE: BUAT BARU VS TAUTKAN -->
+                <!-- TOGGLE MODE -->
                 <div>
                     <label class="block text-[11px] font-semibold text-slate-600 mb-1">Pilih Tindakan:</label>
                     <div class="flex gap-2">
@@ -79,15 +79,13 @@
                     </div>
                 </div>
 
-                <!-- PANEL SEARCH BARANG LAMA (Muncul Saat Mode Tautkan Aktif) -->
+                <!-- PANEL SEARCH TAUTAN -->
                 <div id="linkSearchPanel" class="hidden space-y-2 p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-lg">
                     <label class="block text-[11px] font-bold text-indigo-900">🔍 Cari Nama Barang Lama:</label>
                     <input type="text" id="linkSearchInput" onkeyup="filterLinkSearch()" placeholder="Ketik nama barang (misal: Gas, Indomilk)..." class="w-full p-2 border rounded-lg text-xs bg-white outline-indigo-500 font-semibold">
                     
-                    <!-- Hasil Pencarian Tautan -->
                     <div id="linkSearchResults" class="max-h-36 overflow-y-auto space-y-1"></div>
 
-                    <!-- Indikator Barang Terpilih -->
                     <div id="selectedLinkBadge" class="hidden p-2 bg-emerald-100 border border-emerald-300 rounded-lg text-emerald-900 font-bold flex justify-between items-center">
                         <span id="selectedLinkText" class="truncate pr-2"></span>
                         <button type="button" onclick="clearSelectedLink()" class="text-xs bg-rose-500 text-white px-2 py-1 rounded font-bold hover:bg-rose-600">✕ Ganti</button>
@@ -116,54 +114,84 @@
 
         <!-- ETALASE BARANG -->
         <div class="bg-white rounded-xl shadow p-4">
-            <h2 class="text-sm font-bold mb-3">📦 Etalase Barang Saya</h2>
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-sm font-bold">📦 Etalase Online (Google Sheets)</h2>
+                <button onclick="loadProductsFromSheets()" class="text-[10px] bg-slate-200 hover:bg-slate-300 font-semibold px-2 py-1 rounded">🔄 Refresh Data</button>
+            </div>
             <input type="text" id="etalaseSearchInput" onkeyup="renderEtalase()" placeholder="🔍 Cari barang / barcode di etalase..." class="w-full mb-3 p-2 border rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50">
             <div id="etalaseList" class="space-y-2 max-h-52 overflow-y-auto text-xs"></div>
         </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIKA KASIR MULTI-BARCODE & SEARCH TAUTAN -->
+    <!-- LOGIKA JAVASCRIPT LENGKAP -->
     <script>
+        // ⬇️ ⬇️ PASTE URL APPS SCRIPT ANDA DI ANTARA TANDA PETIK DI BAWAH INI ⬇️ ⬇️
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWGoaKyZg9jNTGMz4yYDi9I8zTR_AOTPBKUzwakcJkVeUeSkjNQY28vbFpw4mNgMW3/exec";
+        // ⬆️ ⬆️ ----------------------------------------------------------- ⬆️ ⬆️
+
         let html5QrCode = null;
         let ocrWorker = null;
         let ocrInterval = null;
         let isProcessingOcr = false;
         let isLockingScan = false;
         let editingId = null;
-        let selectedLinkId = 'NEW'; // default mode NEW
+        let selectedLinkId = 'NEW';
 
-        function loadProducts() {
-            let data = localStorage.getItem('sembako_products_v2');
-            if (data) return JSON.parse(data);
-
-            let oldData = localStorage.getItem('sembako_products');
-            if (oldData) {
-                let oldObj = JSON.parse(oldData);
-                let newObj = {};
-                let count = 1;
-                for (let bCode in oldObj) {
-                    let id = "PROD_" + (count++);
-                    let bList = bCode.startsWith("MANUAL_") ? [] : [bCode];
-                    newObj[id] = { name: oldObj[bCode].name, price: oldObj[bCode].price, barcodes: bList };
-                }
-                localStorage.setItem('sembako_products_v2', JSON.stringify(newObj));
-                return newObj;
-            }
-
-            return {
-                "PROD_1": { name: "Indomilk Kids Cokelat", price: 4000, barcodes: ["INDOMILK1"] },
-                "PROD_2": { name: "Indomilk Sachet Renteng", price: 15000, barcodes: ["INDOMILK2"] },
-                "PROD_3": { name: "Indomie Goreng", price: 3500, barcodes: ["INDOMIE"] }
-            };
-        }
-
-        let products = loadProducts();
+        let products = {}; // Disimpan secara Online via Google Sheets
         let cart = {}; 
         let lastScannedKey = null;
         let lastScanTime = 0;
         let lastFailTime = 0;
         let failTimer = null;
 
+        // --- SINKRONISASI GOOGLE SHEETS ---
+        async function loadProductsFromSheets() {
+            const liveText = document.getElementById('liveTextDisplay');
+            if (liveText) liveText.innerText = "🔄 Mengambil data dari Google Sheets...";
+
+            if (!SCRIPT_URL || SCRIPT_URL.includes("PASTE_URL_")) {
+                if (liveText) liveText.innerText = "⚠️ Masukkan URL Apps Script Anda di kode!";
+                return;
+            }
+
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                products = data || {};
+                
+                renderEtalase();
+                if (liveText) liveText.innerText = "✅ Etalase Google Sheets siap!";
+            } catch (err) {
+                console.error("Gagal mengambil data:", err);
+                if (liveText) liveText.innerText = "❌ Gagal terhubung ke Google Sheets.";
+            }
+        }
+
+        async function saveToGoogleSheets(id, name, price, barcodes) {
+            const liveText = document.getElementById('liveTextDisplay');
+            if (liveText) liveText.innerText = "⏳ Menyimpan ke Google Sheets...";
+
+            const payload = {
+                id: id,
+                name: name,
+                price: price,
+                barcodes: barcodes
+            };
+
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                if (liveText) liveText.innerText = "✅ Tersimpan di Google Sheets!";
+                await loadProductsFromSheets(); // Refresh ulang data terbaru
+            } catch (err) {
+                console.error("Gagal menyimpan:", err);
+                alert("Gagal menyimpan ke Google Sheets. Periksa koneksi internet.");
+            }
+        }
+
+        // --- HELPER BANTUAN ---
         function findProductIdByBarcode(barcode) {
             if (!barcode) return null;
             const clean = barcode.trim().toUpperCase();
@@ -206,7 +234,7 @@
             if ("vibrate" in navigator) navigator.vibrate(200);
         }
 
-        // --- SISTEM TOGGLE MODE & PENCAIRAN TAUTAN (BARU) ---
+        // --- TOGGLE MODE & SEARCH TAUTAN ---
         function setStorageMode(mode) {
             selectedLinkId = mode;
             const newBtn = document.getElementById('modeNewBtn');
@@ -263,7 +291,7 @@
                     row.innerHTML = `
                         <div>
                             <p class="font-bold text-slate-800">${item.name}</p>
-                            <p class="text-[10px] text-slate-400 font-mono">${item.barcodes.length ? item.barcodes.join(', ') : 'Tanpa Barcode'}</p>
+                            <p class="text-[10px] text-slate-400 font-mono">${item.barcodes && item.barcodes.length ? item.barcodes.join(', ') : 'Tanpa Barcode'}</p>
                         </div>
                         <span class="font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded">${formatRupiah(item.price)}</span>
                     `;
@@ -319,7 +347,7 @@
             document.getElementById('saveBtn').innerText = "💾 Pilih Barang di Atas";
         }
 
-        // --- KELOLA KERANJANG & KEMBALIAN ---
+        // --- MANAJEMEN KERANJANG ---
         function getGrandTotal() {
             return Object.keys(cart).reduce((sum, id) => sum + (cart[id].price * cart[id].qty), 0);
         }
@@ -381,7 +409,6 @@
             }
         }
 
-        // --- FITUR PENCARIAN MANUAL ---
         function filterManualSearch() {
             const rawQuery = document.getElementById('manualSearchInput').value;
             const query = cleanAndFixText(rawQuery);
@@ -406,7 +433,7 @@
                     row.innerHTML = `
                         <div>
                             <p class="font-bold text-slate-800">${item.name}</p>
-                            <p class="text-[10px] text-slate-400">Barcode: ${item.barcodes.length ? item.barcodes.join(', ') : 'Tanpa Barcode'}</p>
+                            <p class="text-[10px] text-slate-400">Barcode: ${item.barcodes && item.barcodes.length ? item.barcodes.join(', ') : 'Tanpa Barcode'}</p>
                         </div>
                         <span class="font-bold text-emerald-700">${formatRupiah(item.price)}</span>
                     `;
@@ -429,7 +456,7 @@
             }
         }
 
-        // --- FITUR PERINTAH SUARA (MIC) ---
+        // --- FITUR SUARA (MIC) ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
         let isListening = false;
@@ -612,7 +639,6 @@
             }
         }
 
-        // --- MANAJEMEN KERANJANG ---
         function addToCart(productId) {
             if (!products[productId]) return;
             if (cart[productId]) {
@@ -673,8 +699,8 @@
             calculateChange();
         }
 
-        // --- SIMPAN / TAUTKAN BARANG ---
-        function saveProduct(e) {
+        // --- SIMPAN DAN PENAUTAN BARANG KE GOOGLE SHEETS ---
+        async function saveProduct(e) {
             e.preventDefault();
             const barcode = document.getElementById('barcodeInput').value.trim().toUpperCase();
 
@@ -686,22 +712,14 @@
                 }
                 const targetProd = products[selectedLinkId];
 
-                const existingOwnerId = findProductIdByBarcode(barcode);
-                if (existingOwnerId && existingOwnerId !== selectedLinkId) {
-                    alert(`Barcode "${barcode}" sudah dipakai oleh barang lain: "${products[existingOwnerId].name}".`);
-                    return;
-                }
-
                 if (!targetProd.barcodes.includes(barcode)) {
                     targetProd.barcodes.push(barcode);
-                    localStorage.setItem('sembako_products_v2', JSON.stringify(products));
-                    alert(`Berhasil! Barcode "${barcode}" ditautkan ke ${targetProd.name}.`);
+                    await saveToGoogleSheets(selectedLinkId, targetProd.name, targetProd.price, targetProd.barcodes);
                 } else {
                     alert(`Barcode "${barcode}" sudah ada di ${targetProd.name}.`);
                 }
 
                 cancelEdit();
-                renderEtalase();
                 return;
             }
 
@@ -710,7 +728,7 @@
                 return;
             }
 
-            // OPSI B: BARANG BARU
+            // OPSI B: BARANG BARU ATAU EDIT DETAIL
             const name = document.getElementById('nameInput').value.trim();
             const rawPrice = document.getElementById('priceInput').value;
             const price = processAmount(rawPrice);
@@ -720,23 +738,23 @@
                 return;
             }
 
+            let targetId = editingId;
+            let bList = [];
+
             if (editingId) {
                 products[editingId].name = name;
                 products[editingId].price = price;
                 if (barcode && !products[editingId].barcodes.includes(barcode)) {
                     products[editingId].barcodes.push(barcode);
                 }
+                bList = products[editingId].barcodes;
             } else {
-                const id = "PROD_" + Date.now();
-                const bList = barcode ? [barcode] : [];
-                products[id] = { name: name, price: price, barcodes: bList };
+                targetId = "PROD_" + Date.now();
+                bList = barcode ? [barcode] : [];
             }
 
-            localStorage.setItem('sembako_products_v2', JSON.stringify(products));
-
+            await saveToGoogleSheets(targetId, name, price, bList);
             cancelEdit();
-            renderEtalase();
-            alert(`Berhasil menyimpan ${name} (${formatRupiah(price)})`);
         }
 
         function editProduct(id) {
@@ -745,7 +763,7 @@
 
             setStorageMode('NEW');
 
-            document.getElementById('barcodeInput').value = item.barcodes.length ? item.barcodes[0] : '';
+            document.getElementById('barcodeInput').value = (item.barcodes && item.barcodes.length) ? item.barcodes[0] : '';
             document.getElementById('nameInput').value = item.name;
             document.getElementById('priceInput').value = item.price;
 
@@ -755,11 +773,10 @@
             document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
         }
 
-        function removeBarcodeFromProduct(id, barcode) {
+        async function removeBarcodeFromProduct(id, barcode) {
             if (confirm(`Hapus barcode "${barcode}" dari "${products[id].name}"?`)) {
                 products[id].barcodes = products[id].barcodes.filter(b => b !== barcode);
-                localStorage.setItem('sembako_products_v2', JSON.stringify(products));
-                renderEtalase();
+                await saveToGoogleSheets(id, products[id].name, products[id].price, products[id].barcodes);
             }
         }
 
@@ -771,14 +788,6 @@
             document.getElementById('cancelEditBtn').classList.add('hidden');
         }
 
-        function deleteProduct(id) {
-            if (confirm(`Hapus "${products[id].name}" dari etalase?`)) {
-                delete products[id];
-                localStorage.setItem('sembako_products_v2', JSON.stringify(products));
-                renderEtalase();
-            }
-        }
-
         function renderEtalase() {
             const listDiv = document.getElementById('etalaseList');
             const searchInput = document.getElementById('etalaseSearchInput');
@@ -788,7 +797,7 @@
             listDiv.innerHTML = '';
 
             if (ids.length === 0) {
-                listDiv.innerHTML = `<p class="text-center text-slate-400 py-3">Belum ada barang di etalase.</p>`;
+                listDiv.innerHTML = `<p class="text-center text-slate-400 py-3">Belum ada barang di etalase Google Sheets.</p>`;
                 return;
             }
 
@@ -827,7 +836,6 @@
                             </div>
                             <div class="flex gap-1 shrink-0">
                                 <button onclick="editProduct('${id}')" class="px-2 py-1 bg-amber-100 text-amber-800 rounded font-semibold text-[10px] hover:bg-amber-200">✏️ Edit</button>
-                                <button onclick="deleteProduct('${id}')" class="px-2 py-1 bg-rose-100 text-rose-700 rounded font-semibold text-[10px] hover:bg-rose-200">🗑️ Hapus</button>
                             </div>
                         </div>
                         <div class="pt-1 border-t border-slate-200 flex flex-wrap gap-1 items-center">
@@ -839,8 +847,9 @@
             });
         }
 
+        // Panggil pertama kali saat web dibuka
         renderCart();
-        renderEtalase();
+        loadProductsFromSheets();
     </script>
 </body>
 </html>
