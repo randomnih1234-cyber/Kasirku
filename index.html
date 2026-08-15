@@ -107,7 +107,7 @@
                     <input type="text" id="priceInput" required placeholder="Harga" class="w-full p-2 border rounded">
                 </div>
 
-                <button id="saveBtn" class="w-full bg-slate-800 text-white p-2.5 rounded-lg font-bold hover:bg-slate-900 transition">💾 Simpan Barang Baru</button>
+                <button id="saveBtn" class="w-full bg-slate-800 text-white p-2.5 rounded-lg font-bold hover:bg-slate-900 transition disabled:bg-slate-400 disabled:cursor-not-allowed">💾 Simpan Barang Baru</button>
                 <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden w-full bg-slate-200 text-slate-700 p-2 rounded-lg font-semibold hover:bg-slate-300">Batal Edit</button>
             </form>
         </div>
@@ -116,7 +116,7 @@
         <div class="bg-white rounded-xl shadow p-4">
             <div class="flex justify-between items-center mb-3">
                 <h2 class="text-sm font-bold">📦 Etalase Online (Google Sheets)</h2>
-                <button onclick="loadProductsFromSheets()" class="text-[10px] bg-slate-200 hover:bg-slate-300 font-semibold px-2 py-1 rounded">🔄 Refresh Data</button>
+                <button id="refreshBtn" onclick="loadProductsFromSheets()" class="text-[10px] bg-slate-200 hover:bg-slate-300 font-semibold px-2 py-1 rounded disabled:opacity-50">🔄 Refresh Data</button>
             </div>
             <input type="text" id="etalaseSearchInput" onkeyup="renderEtalase()" placeholder="🔍 Cari barang / barcode di etalase..." class="w-full mb-3 p-2 border rounded-lg text-xs outline-none focus:ring-1 focus:ring-emerald-500 bg-slate-50">
             <div id="etalaseList" class="space-y-2 max-h-52 overflow-y-auto text-xs"></div>
@@ -125,7 +125,7 @@
 
     <!-- LOGIKA JAVASCRIPT LENGKAP -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzvtvUu3zaLBfirSb36g5qmkE17uwoOXyUn8qHBom6aRRQ_8hM-4fXl1UshfHYJ8lY1/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWGoaKyZg9jNTGMz4yYDi9I8zTR_AOTPBKUzwakcJkVeUeSkjNQY28vbFpw4mNgMW3/exec";
 
         let html5QrCode = null;
         let ocrWorker = null;
@@ -134,6 +134,7 @@
         let isLockingScan = false;
         let editingId = null;
         let selectedLinkId = 'NEW';
+        let isGlobalBusy = false; // Pengunci aksi global
 
         let products = {};
         let cart = {}; 
@@ -145,12 +146,9 @@
         // --- SINKRONISASI GOOGLE SHEETS ---
         async function loadProductsFromSheets() {
             const liveText = document.getElementById('liveTextDisplay');
+            const refreshBtn = document.getElementById('refreshBtn');
             if (liveText) liveText.innerText = "🔄 Mengambil data dari Google Sheets...";
-
-            if (!SCRIPT_URL || SCRIPT_URL.includes("PASTE_URL_")) {
-                if (liveText) liveText.innerText = "⚠️ Masukkan URL Apps Script Anda di kode!";
-                return;
-            }
+            if (refreshBtn) refreshBtn.disabled = true;
 
             try {
                 const response = await fetch(SCRIPT_URL);
@@ -162,6 +160,8 @@
             } catch (err) {
                 console.error("Gagal mengambil data:", err);
                 if (liveText) liveText.innerText = "❌ Gagal terhubung ke Google Sheets.";
+            } finally {
+                if (refreshBtn) refreshBtn.disabled = false;
             }
         }
 
@@ -169,12 +169,7 @@
             const liveText = document.getElementById('liveTextDisplay');
             if (liveText) liveText.innerText = "⏳ Menyimpan ke Google Sheets...";
 
-            const payload = {
-                id: id,
-                name: name,
-                price: price,
-                barcodes: barcodes
-            };
+            const payload = { id, name, price, barcodes };
 
             try {
                 await fetch(SCRIPT_URL, {
@@ -189,15 +184,11 @@
             }
         }
 
-        // FUNGSI HAPUS DARIPADA GOOGLE SHEETS
         async function deleteFromGoogleSheets(id) {
             const liveText = document.getElementById('liveTextDisplay');
             if (liveText) liveText.innerText = "⏳ Menghapus dari Google Sheets...";
 
-            const payload = {
-                id: id,
-                action: 'delete'
-            };
+            const payload = { id, action: 'delete' };
 
             try {
                 await fetch(SCRIPT_URL, {
@@ -214,11 +205,21 @@
             }
         }
 
-        function deleteProduct(id) {
+        async function deleteProduct(id, btnElement) {
+            if (isGlobalBusy) return;
             const item = products[id];
             if (!item) return;
+
             if (confirm(`Apakah Anda yakin ingin menghapus "${item.name}" dari etalase?`)) {
-                deleteFromGoogleSheets(id);
+                isGlobalBusy = true;
+                if (btnElement) {
+                    btnElement.disabled = true;
+                    btnElement.innerText = "⏳ Menghapus...";
+                    btnElement.classList.add('opacity-50');
+                }
+                
+                await deleteFromGoogleSheets(id);
+                isGlobalBusy = false;
             }
         }
 
@@ -733,59 +734,75 @@
         // --- SIMPAN DAN PENAUTAN BARANG KE GOOGLE SHEETS ---
         async function saveProduct(e) {
             e.preventDefault();
+            if (isGlobalBusy) return;
+
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.innerText;
             const barcode = document.getElementById('barcodeInput').value.trim().toUpperCase();
 
-            // OPSI A: TAUTKAN BARCODE KE BARANG LAMA
-            if (selectedLinkId !== 'NEW' && selectedLinkId !== 'LINK') {
-                if (!barcode) {
-                    alert("Isi atau scan barcode terlebih dahulu sebelum menautkan!");
+            // MATIKAN TOMBOL SIMPAN SEMENTARA
+            isGlobalBusy = true;
+            saveBtn.disabled = true;
+            saveBtn.innerText = "⏳ Memproses ke Google Sheets...";
+
+            try {
+                // OPSI A: TAUTKAN BARCODE KE BARANG LAMA
+                if (selectedLinkId !== 'NEW' && selectedLinkId !== 'LINK') {
+                    if (!barcode) {
+                        alert("Isi atau scan barcode terlebih dahulu sebelum menautkan!");
+                        return;
+                    }
+                    const targetProd = products[selectedLinkId];
+
+                    if (!targetProd.barcodes.includes(barcode)) {
+                        targetProd.barcodes.push(barcode);
+                        await saveToGoogleSheets(selectedLinkId, targetProd.name, targetProd.price, targetProd.barcodes);
+                    } else {
+                        alert(`Barcode "${barcode}" sudah ada di ${targetProd.name}.`);
+                    }
+
+                    cancelEdit();
                     return;
                 }
-                const targetProd = products[selectedLinkId];
 
-                if (!targetProd.barcodes.includes(barcode)) {
-                    targetProd.barcodes.push(barcode);
-                    await saveToGoogleSheets(selectedLinkId, targetProd.name, targetProd.price, targetProd.barcodes);
+                if (selectedLinkId === 'LINK') {
+                    alert("Mohon ketik & klik nama barang lama yang mau ditautkan!");
+                    return;
+                }
+
+                // OPSI B: BARANG BARU ATAU EDIT DETAIL
+                const name = document.getElementById('nameInput').value.trim();
+                const rawPrice = document.getElementById('priceInput').value;
+                const price = processAmount(rawPrice);
+
+                if (!name || price === 0) {
+                    alert("Mohon isi nama dan harga barang dengan benar.");
+                    return;
+                }
+
+                let targetId = editingId;
+                let bList = [];
+
+                if (editingId) {
+                    products[editingId].name = name;
+                    products[editingId].price = price;
+                    if (barcode && !products[editingId].barcodes.includes(barcode)) {
+                        products[editingId].barcodes.push(barcode);
+                    }
+                    bList = products[editingId].barcodes;
                 } else {
-                    alert(`Barcode "${barcode}" sudah ada di ${targetProd.name}.`);
+                    targetId = "PROD_" + Date.now();
+                    bList = barcode ? [barcode] : [];
                 }
 
+                await saveToGoogleSheets(targetId, name, price, bList);
                 cancelEdit();
-                return;
+            } finally {
+                // HIDUPKAN KEMBALI TOMBOL
+                isGlobalBusy = false;
+                saveBtn.disabled = false;
+                saveBtn.innerText = originalText;
             }
-
-            if (selectedLinkId === 'LINK') {
-                alert("Mohon ketik & klik nama barang lama yang mau ditautkan!");
-                return;
-            }
-
-            // OPSI B: BARANG BARU ATAU EDIT DETAIL
-            const name = document.getElementById('nameInput').value.trim();
-            const rawPrice = document.getElementById('priceInput').value;
-            const price = processAmount(rawPrice);
-
-            if (!name || price === 0) {
-                alert("Mohon isi nama dan harga barang dengan benar.");
-                return;
-            }
-
-            let targetId = editingId;
-            let bList = [];
-
-            if (editingId) {
-                products[editingId].name = name;
-                products[editingId].price = price;
-                if (barcode && !products[editingId].barcodes.includes(barcode)) {
-                    products[editingId].barcodes.push(barcode);
-                }
-                bList = products[editingId].barcodes;
-            } else {
-                targetId = "PROD_" + Date.now();
-                bList = barcode ? [barcode] : [];
-            }
-
-            await saveToGoogleSheets(targetId, name, price, bList);
-            cancelEdit();
         }
 
         function editProduct(id) {
@@ -805,9 +822,12 @@
         }
 
         async function removeBarcodeFromProduct(id, barcode) {
+            if (isGlobalBusy) return;
             if (confirm(`Hapus barcode "${barcode}" dari "${products[id].name}"?`)) {
+                isGlobalBusy = true;
                 products[id].barcodes = products[id].barcodes.filter(b => b !== barcode);
                 await saveToGoogleSheets(id, products[id].name, products[id].price, products[id].barcodes);
+                isGlobalBusy = false;
             }
         }
 
@@ -867,7 +887,7 @@
                             </div>
                             <div class="flex gap-1 shrink-0">
                                 <button onclick="editProduct('${id}')" class="px-2 py-1 bg-amber-100 text-amber-800 rounded font-semibold text-[10px] hover:bg-amber-200">✏️ Edit</button>
-                                <button onclick="deleteProduct('${id}')" class="px-2 py-1 bg-rose-100 text-rose-700 rounded font-semibold text-[10px] hover:bg-rose-200">🗑️ Hapus</button>
+                                <button onclick="deleteProduct('${id}', this)" class="px-2 py-1 bg-rose-100 text-rose-700 rounded font-semibold text-[10px] hover:bg-rose-200">🗑️ Hapus</button>
                             </div>
                         </div>
                         <div class="pt-1 border-t border-slate-200 flex flex-wrap gap-1 items-center">
@@ -879,7 +899,6 @@
             });
         }
 
-        // Panggil pertama kali saat web dibuka
         renderCart();
         loadProductsFromSheets();
     </script>
