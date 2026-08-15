@@ -242,34 +242,30 @@
                             <input type="text" id="priceInput" required placeholder="Contoh: 14000" class="w-full p-2.5 border border-slate-200 rounded-xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                         </div>
 
-                        <!-- SECTION FOTO PRODUK (KAMERA LANGSUNG, GALERI, & LINK URL) -->
+                        <!-- SECTION FOTO PRODUK -->
                         <div class="space-y-2 border-t border-slate-100 pt-2">
                             <label class="block text-[11px] font-bold text-slate-700">🖼️ Foto Produk (Pilih Sumber Foto):</label>
                             
-                            <!-- Switcher 3 Tombol Opsi Foto -->
                             <div class="grid grid-cols-3 gap-1.5 text-[11px]">
                                 <button type="button" id="imgTabCameraBtn" onclick="openCamera()" class="py-2 px-1 rounded-xl font-bold border text-center transition bg-slate-800 text-white truncate shadow-xs">📷 Kamera</button>
                                 <button type="button" id="imgTabUploadBtn" onclick="openGallery()" class="py-2 px-1 rounded-xl font-semibold border text-center transition bg-slate-100 text-slate-600 hover:bg-slate-200 truncate">📁 Galeri</button>
                                 <button type="button" id="imgTabUrlBtn" onclick="setImageTab('URL')" class="py-2 px-1 rounded-xl font-semibold border text-center transition bg-slate-100 text-slate-600 hover:bg-slate-200 truncate">🔗 Link URL</button>
                             </div>
 
-                            <!-- Input Tersembunyi untuk Kamera & Galeri -->
                             <input type="file" id="cameraInput" accept="image/*" capture="environment" onchange="handleFileSelect(event)" class="hidden">
                             <input type="file" id="galleryInput" accept="image/*" onchange="handleFileSelect(event)" class="hidden">
 
-                            <!-- Opsi Link URL Input -->
                             <div id="imgUrlContainer" class="hidden space-y-1">
                                 <input type="url" id="imageInput" oninput="handleUrlInput(event)" placeholder="https://domain.com/gambar.jpg" class="w-full p-2.5 border border-slate-200 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                             </div>
 
-                            <!-- Preview Foto Realtime -->
                             <div id="previewContainer" class="hidden flex items-center gap-3 p-2 bg-slate-50 border border-slate-200 rounded-xl">
                                 <img id="previewImage" src="" class="w-12 h-12 object-cover rounded-lg border border-slate-200 shrink-0">
                                 <div class="flex-1 overflow-hidden">
                                     <p class="text-[11px] font-bold text-slate-700">Preview Foto</p>
                                     <p id="previewSourceText" class="text-[10px] text-slate-400 truncate">Terdeteksi</p>
                                 </div>
-                                <button type="button" onclick="clearImageChoice()" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg font-bold text-xs">✕ Hapus</button>
+                                <button type="button" onclick="clearImageChoice()" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg font-bold text-xs">✕ Hapus Foto</button>
                             </div>
                         </div>
 
@@ -311,7 +307,7 @@
 
     <!-- LOGIKA JAVASCRIPT LENGKAP -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLypBO0yKMos4MkWmqbnEx1b3lrXathcKpn-QZOH63AsoFHkPkzUbUqxEe-nzh5_3P/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzjlZWjdhT9zzFKPKcBVhPMn4phB_AmDmovJQO8FscQpZA4jraQa0TxOZI6CSawChiS/exec";
 
         let html5QrCode = null;
         let ocrWorker = null;
@@ -322,7 +318,7 @@
         let selectedLinkId = 'NEW';
         let isGlobalBusy = false;
 
-        let currentImageData = ""; // Menyimpan foto akhir (Base64 atau URL)
+        let currentImageData = "";
 
         let products = {};
         let cart = {}; 
@@ -331,15 +327,18 @@
         let lastFailTime = 0;
         let failTimer = null;
 
-        // --- DUAL / TRIPLE FOTO MANAGER ---
         function openCamera() {
             setImageTab('CAMERA');
-            document.getElementById('cameraInput').click();
+            const camInput = document.getElementById('cameraInput');
+            camInput.value = "";
+            camInput.click();
         }
 
         function openGallery() {
             setImageTab('UPLOAD');
-            document.getElementById('galleryInput').click();
+            const galInput = document.getElementById('galleryInput');
+            galInput.value = "";
+            galInput.click();
         }
 
         function setImageTab(tab) {
@@ -373,7 +372,8 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    const maxDim = 400; // Kompres ukuran maksimal 400px
+                    // Ringankan ukuran foto agar upload stabil (Max 300px)
+                    const maxDim = 300;
                     let width = img.width;
                     let height = img.height;
                     
@@ -389,8 +389,8 @@
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    currentImageData = canvas.toDataURL('image/jpeg', 0.7);
-                    updatePreview(currentImageData, `Foto: ${file.name || 'Jepretan Kamera'}`);
+                    currentImageData = canvas.toDataURL('image/jpeg', 0.6);
+                    updatePreview(currentImageData, `Foto Siap!`);
                 };
                 img.src = e.target.result;
             };
@@ -425,7 +425,6 @@
             document.getElementById('previewContainer').classList.add('hidden');
         }
 
-        // --- SINKRONISASI GOOGLE SHEETS ---
         async function loadProductsFromSheets() {
             const liveText = document.getElementById('liveTextDisplay');
             const refreshBtn = document.getElementById('refreshBtn');
@@ -454,15 +453,22 @@
             const payload = { id, name, price, barcodes, image };
 
             try {
-                await fetch(SCRIPT_URL, {
+                const res = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     body: JSON.stringify(payload)
                 });
-                if (liveText) liveText.innerText = "✅ Tersimpan di Google Sheets!";
-                await loadProductsFromSheets();
+                const result = await res.json();
+                
+                if (result.status === "error") {
+                    alert("Gagal simpan: " + result.message);
+                    if (liveText) liveText.innerText = "❌ Gagal menyimpan.";
+                } else {
+                    if (liveText) liveText.innerText = "✅ Tersimpan di Google Sheets!";
+                    await loadProductsFromSheets();
+                }
             } catch (err) {
                 console.error("Gagal menyimpan:", err);
-                alert("Gagal menyimpan ke Google Sheets. Periksa koneksi internet.");
+                alert("Gagal terhubung ke Google Sheets.");
             }
         }
 
@@ -483,7 +489,7 @@
                 await loadProductsFromSheets();
             } catch (err) {
                 console.error("Gagal menghapus:", err);
-                alert("Gagal menghapus dari Google Sheets. Periksa koneksi internet.");
+                alert("Gagal menghapus dari Google Sheets.");
             }
         }
 
@@ -505,7 +511,6 @@
             }
         }
 
-        // --- HELPER BANTUAN ---
         function findProductIdByBarcode(barcode) {
             if (!barcode) return null;
             const clean = barcode.trim().toUpperCase();
@@ -555,7 +560,6 @@
             return `<div class="${sizeClass} bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 border border-slate-200 shrink-0 text-base font-bold">📦</div>`;
         }
 
-        // --- TOGGLE MODE & SEARCH TAUTAN ---
         function setStorageMode(mode) {
             selectedLinkId = mode;
             const newBtn = document.getElementById('modeNewBtn');
@@ -681,7 +685,6 @@
             document.getElementById('saveBtn').innerText = "💾 Pilih Barang di Atas";
         }
 
-        // --- MANAJEMEN KERANJANG ---
         function getGrandTotal() {
             return Object.keys(cart).reduce((sum, id) => sum + (cart[id].price * cart[id].qty), 0);
         }
@@ -794,7 +797,6 @@
             }
         }
 
-        // --- FITUR SUARA (MIC) ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
         let isListening = false;
@@ -889,7 +891,6 @@
             }
         }
 
-        // --- KAMERA SCANNER BARCODE ---
         async function startScanner() {
             if (html5QrCode && html5QrCode.isScanning) return;
             document.getElementById('liveTextDisplay').innerText = "Menyiapkan kamera...";
@@ -1043,7 +1044,6 @@
             calculateChange();
         }
 
-        // --- SIMPAN DAN PENAUTAN BARANG KE GOOGLE SHEETS ---
         async function saveProduct(e) {
             e.preventDefault();
             if (isGlobalBusy) return;
@@ -1057,7 +1057,6 @@
             saveBtn.innerText = "⏳ Memproses ke Google Sheets...";
 
             try {
-                // OPSI A: TAUTKAN BARCODE KE BARANG LAMA
                 if (selectedLinkId !== 'NEW' && selectedLinkId !== 'LINK') {
                     if (!barcode) {
                         alert("Isi atau scan barcode terlebih dahulu sebelum menautkan!");
@@ -1081,7 +1080,6 @@
                     return;
                 }
 
-                // OPSI B: BARANG BARU ATAU EDIT DETAIL
                 const name = document.getElementById('nameInput').value.trim();
                 const rawPrice = document.getElementById('priceInput').value;
                 const price = processAmount(rawPrice);
@@ -1091,6 +1089,7 @@
                     return;
                 }
 
+                // Pembuatan ID Unik Terjamin (Gunakan kombinasi acak untuk menghindari duplikat)
                 let targetId = editingId;
                 let bList = [];
 
@@ -1103,7 +1102,7 @@
                     }
                     bList = products[editingId].barcodes;
                 } else {
-                    targetId = "PROD_" + Date.now();
+                    targetId = "PROD_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
                     bList = barcode ? [barcode] : [];
                 }
 
