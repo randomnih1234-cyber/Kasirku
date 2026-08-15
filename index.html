@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Sembako Pintar - Online Google Sheets</title>
+    <title>Kasir Sembako Pintar - Online Google Sheets & AI</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -70,13 +70,13 @@
                     <h1 class="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Kasir Sembako Pintar</h1>
                     <p class="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Terhubung ke Google Sheets Online
+                        Terhubung ke Google Sheets & Gemini AI
                     </p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
                 <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-xs font-semibold">
-                    ⚡ POS v2.0
+                    ⚡ POS v3.0 (AI Powered)
                 </span>
             </div>
         </header>
@@ -91,7 +91,7 @@
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 relative">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                            <span>📷</span> Scanner Barcode & OCR
+                            <span>📷</span> Scanner Barcode, OCR & AI
                         </h2>
                         <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">Auto Scan</span>
                     </div>
@@ -124,14 +124,17 @@
 
                     <!-- Control Buttons -->
                     <div class="flex items-center gap-2 mt-3">
-                        <button onclick="startScanner()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-                            <span>📷</span> Kamera
+                        <button onclick="startScanner()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1">
+                            <span>📷</span> Scan Barcode
+                        </button>
+                        <button onclick="triggerAIScan()" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1">
+                            <span>✨</span> Scan AI
                         </button>
                         <button id="micBtn" onclick="toggleVoice()" title="Input Suara" class="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white p-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-600/20 active:scale-[0.98] transition-all flex items-center justify-center shrink-0">
                             🎙️
                         </button>
-                        <button onclick="stopScanner()" class="flex-1 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold shadow-md shadow-rose-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
-                            <span>🛑</span> Stop
+                        <button onclick="stopScanner()" class="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white p-2.5 rounded-xl text-xs font-bold shadow-md shadow-rose-500/20 active:scale-[0.98] transition-all flex items-center justify-center shrink-0" title="Stop Scanner">
+                            🛑
                         </button>
                     </div>
                     
@@ -307,7 +310,7 @@
 
     <!-- LOGIKA JAVASCRIPT LENGKAP -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx5WScVt5aq5hdfBD36vEu_xXLiw46fEXQMkTnqk4iERnb4P5DPHilX0oKqktW6ya5h/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbDCVcF5gEB_69Idu33liRBr30oJ5TCV7v_PCnU7lCxHd7aOtYFVp-ynQWbgqywipM/exec";
 
         let html5QrCode = null;
         let ocrWorker = null;
@@ -331,6 +334,14 @@
             setImageTab('CAMERA');
             const camInput = document.getElementById('cameraInput');
             camInput.value = "";
+            camInput.dataset.mode = "";
+            camInput.click();
+        }
+
+        function triggerAIScan() {
+            const camInput = document.getElementById('cameraInput');
+            camInput.value = "";
+            camInput.dataset.mode = "AI_SCAN"; // Set flag mode AI
             camInput.click();
         }
 
@@ -338,6 +349,7 @@
             setImageTab('UPLOAD');
             const galInput = document.getElementById('galleryInput');
             galInput.value = "";
+            galInput.dataset.mode = "";
             galInput.click();
         }
 
@@ -361,43 +373,87 @@
             }
         }
 
-        function handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Dimensi super hemat khusus ikon (Maksimal 120px)
-            const maxDim = 120;
-            let width = img.width;
-            let height = img.height;
-            
-            if (width > height && width > maxDim) {
-                height *= maxDim / width;
-                width = maxDim;
-            } else if (height > maxDim) {
-                width *= maxDim / height;
-                height = maxDim;
+            const isAIMode = event.target.dataset.mode === "AI_SCAN";
+            event.target.dataset.mode = ""; // Reset mode flag
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = async function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const maxDim = isAIMode ? 400 : 120; // AI butuh detail 400px, Etalase cukup 120px hemat Drive
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > height && width > maxDim) {
+                        height *= maxDim / width;
+                        width = maxDim;
+                    } else if (height > maxDim) {
+                        width *= maxDim / height;
+                        height = maxDim;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const base64Data = canvas.toDataURL('image/jpeg', isAIMode ? 0.7 : 0.5);
+
+                    if (isAIMode) {
+                        await processImageWithAI(base64Data);
+                    } else {
+                        currentImageData = base64Data;
+                        updatePreview(currentImageData, `Foto Siap (Versi Hemat)`);
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function processImageWithAI(base64Image) {
+            const liveText = document.getElementById('liveTextDisplay');
+            if (liveText) liveText.innerText = "🤖 Gemini AI sedang mengenali produk...";
+
+            const catalog = {};
+            for (let id in products) {
+                catalog[id] = products[id].name;
             }
 
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Kualitas kompresi 50% (Sangat kecil, tetap jelas untuk ikon)
-            currentImageData = canvas.toDataURL('image/jpeg', 0.5);
-            updatePreview(currentImageData, `Foto Siap (Versi Hemat)`);
-        };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-}
-
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'analyze_ai',
+                        image: base64Image,
+                        catalog: catalog
+                    })
+                });
+                
+                const resData = await response.json();
+                
+                if (resData.status === "success" && resData.matchedId && products[resData.matchedId]) {
+                    const matchedItem = products[resData.matchedId];
+                    addToCart(resData.matchedId);
+                    showScanFeedback(true, `✨ AI: ${matchedItem.name}`);
+                    triggerVibration();
+                    if (liveText) liveText.innerText = `🤖 AI Menemukan: ${matchedItem.name}`;
+                } else {
+                    showScanFeedback(false, "AI Tidak Mengenali Produk");
+                    if (liveText) liveText.innerText = "❌ Gemini AI tidak menemukan barang yang cocok.";
+                }
+            } catch (err) {
+                console.error("AI Error:", err);
+                showScanFeedback(false, "Gagal Koneksi AI");
+                if (liveText) liveText.innerText = "⚠️ Gagal terhubung ke AI.";
+            }
+        }
 
         function handleUrlInput(event) {
             const url = event.target.value.trim();
@@ -1019,7 +1075,7 @@
                     <div class="text-center py-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                         <span class="text-2xl block mb-1">🛒</span>
                         <p class="text-slate-400 font-medium">Keranjang masih kosong</p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">Scan barcode, sebut nama (mic), atau cari manual.</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Scan barcode, AI foto, sebut nama (mic), atau cari manual.</p>
                     </div>
                 `;
             } else {
@@ -1091,7 +1147,6 @@
                     return;
                 }
 
-                // Pembuatan ID Unik Terjamin (Gunakan kombinasi acak untuk menghindari duplikat)
                 let targetId = editingId;
                 let bList = [];
 
