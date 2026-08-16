@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Sembako Pintar - Ultra Fast Scan & On-Device AI</title>
+    <title>Kasir Sembako Pintar - Ultra Fast Scan & Management</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -77,28 +77,32 @@
                 </div>
             </div>
             
-            <!-- NAVIGASI TAB UTAMA -->
-            <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+            <!-- NAVIGASI TAB UTAMA (4 MENU) -->
+            <div class="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
                 <button id="tabKasirBtn" onclick="switchTab('kasir')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white shadow-xs">
                     🛒 Kasir & Cek Harga
+                </button>
+                <button id="tabAturBtn" onclick="switchTab('atur')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+                    📦 Atur Barang
                 </button>
                 <button id="tabKalkulatorBtn" onclick="switchTab('kalkulator')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
                     🧮 Kalkulator Modal
                 </button>
+                <button id="tabPelatihanBtn" onclick="switchTab('pelatihan')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-purple-700 bg-purple-100/70 hover:bg-purple-200">
+                    🤖 Rekam AI Kemasan
+                </button>
             </div>
         </header>
 
-        <!-- TAB 1: HALAMAN KASIR & CEK HARGA -->
+        <!-- TAB 1: HALAMAN KASIR & CEK HARGA (SCANNER + KERANJANG SAJA) -->
         <div id="pageKasir" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-            <!-- LEFT COLUMN: SCANNER & CART -->
+            <!-- LEFT COLUMN: SCANNER -->
             <div class="lg:col-span-6 space-y-4">
-                
-                <!-- AREA KAMERA / SCANNER -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 relative">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                            <span>⚡</span> Scanner Kilat, OCR & AI Live
+                            <span>⚡</span> Scanner Penjualan
                         </h2>
                         <span id="aiStatusBadge" class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Memuat AI Lokal...</span>
                     </div>
@@ -122,7 +126,7 @@
                     <div class="mt-3 bg-slate-50 border border-slate-200/60 p-2.5 rounded-xl text-center shadow-inner">
                         <p id="liveTextDisplay" class="text-xs font-semibold text-slate-600 flex items-center justify-center gap-1.5">
                             <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                            Memuat sistem...
+                            Siap digunakan...
                         </p>
                         <div id="failIndicator" class="hidden mt-1.5 pt-1.5 border-t border-slate-200/80 text-xs font-bold text-rose-600 flex items-center justify-center gap-1">
                             <span>❌</span> Barang Tidak Ditemukan
@@ -144,34 +148,6 @@
                             🛑
                         </button>
                     </div>
-
-                    <!-- PANEL PELATIHAN AI LOKAL KEMASAN INSTAN -->
-                    <div class="mt-3 p-3 bg-purple-50/70 border border-purple-200/80 rounded-xl space-y-2">
-                        <div class="flex justify-between items-center">
-                            <span class="text-[11px] font-bold text-purple-950 flex items-center gap-1">
-                                🤖 Pelatihan AI Kemasan Lokal
-                            </span>
-                            <span id="sampleCounterBadge" class="text-[10px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded-full font-bold">0 Sampel</span>
-                        </div>
-                        <p class="text-[10px] text-slate-500">Pilih/edit barang di etalase, arahkan kamera ke bungkusnya, lalu tahan tombol rekam di bawah.</p>
-                        
-                        <div class="flex gap-1.5">
-                            <button id="recordBtn" 
-                                onmousedown="startRecordingSample(event)" 
-                                onmouseup="stopRecordingSample(event)" 
-                                ontouchstart="startRecordingSample(event)" 
-                                ontouchend="stopRecordingSample(event)" 
-                                class="flex-1 bg-purple-700 hover:bg-purple-800 text-white py-2 px-2 rounded-lg text-xs font-bold transition shadow-xs flex items-center justify-center gap-1 no-select">
-                                📸 Tahan Utk Rekam Kemasan
-                            </button>
-                            <button onclick="saveKnnDatasetToLocalStorage()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-lg text-xs font-bold transition shadow-xs shrink-0" title="Simpan Hafalan AI">
-                                💾 Simpan
-                            </button>
-                            <button onclick="clearKnnDataset()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 py-2 px-2.5 rounded-lg text-xs font-bold transition shrink-0" title="Hapus Hafalan AI">
-                                🗑️
-                            </button>
-                        </div>
-                    </div>
                     
                     <!-- Search Input Manual -->
                     <div class="relative mt-3">
@@ -179,8 +155,10 @@
                         <div id="searchResults" class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto z-30 hidden divide-y divide-slate-100"></div>
                     </div>
                 </div>
+            </div>
 
-                <!-- DAFTAR BELANJA / KERANJANG -->
+            <!-- RIGHT COLUMN: DAFTAR BELANJA / KERANJANG -->
+            <div class="lg:col-span-6 space-y-4">
                 <div class="bg-white rounded-2xl shadow-sm border-2 border-emerald-500/30 p-4 space-y-3">
                     <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
                         <div class="flex items-center gap-2">
@@ -195,7 +173,7 @@
                     </div>
 
                     <!-- Cart List -->
-                    <div id="cartList" class="space-y-2 max-h-52 overflow-y-auto text-xs pr-1"></div>
+                    <div id="cartList" class="space-y-2 max-h-64 overflow-y-auto text-xs pr-1"></div>
 
                     <!-- Total & Pembayaran Box -->
                     <div class="bg-gradient-to-br from-emerald-50/70 to-teal-50/40 p-3.5 rounded-xl border border-emerald-200/80 space-y-3">
@@ -229,12 +207,39 @@
                         </button>
                     </div>
                 </div>
-
             </div>
 
-            <!-- RIGHT COLUMN: FORM & ETALASE -->
+        </div>
+
+        <!-- TAB 2: MENU BARU ATUR BARANG / EDIT ETALASE -->
+        <div id="pageAturBarang" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-4">
+            
+            <!-- LEFT COLUMN: SCANNER INPUT BARCODE & FORM TAMBAH/EDIT -->
             <div class="lg:col-span-6 space-y-4">
                 
+                <!-- SCANNER KHUSUS PENANGKAP BARCODE FORM -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 relative">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                            <span>📷</span> Scanner Tangkap Barcode
+                        </h2>
+                        <span id="aturLiveText" class="text-[10px] text-slate-400 font-semibold">Kamera Mati</span>
+                    </div>
+
+                    <div class="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950 min-h-[150px] flex items-center justify-center">
+                        <div id="aturReader" class="w-full bg-black min-h-[150px] flex items-center justify-center"></div>
+                    </div>
+
+                    <div class="flex items-center gap-2 mt-2.5">
+                        <button onclick="startAturScanner()" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 shadow-xs">
+                            <span>📷</span> Scan Barcode Ke Form
+                        </button>
+                        <button onclick="stopAturScanner()" class="bg-rose-50 text-rose-600 hover:bg-rose-100 py-2 px-3 rounded-xl text-xs font-bold transition">
+                            🛑 Stop
+                        </button>
+                    </div>
+                </div>
+
                 <!-- FORM TAMBAH / TAUTKAN BARANG -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4">
                     <div class="flex items-center gap-2 mb-3">
@@ -321,8 +326,10 @@
                         </div>
                     </form>
                 </div>
+            </div>
 
-                <!-- ETALASE BARANG ONLINE -->
+            <!-- RIGHT COLUMN: ETALASE BARANG ONLINE GOOGLE SHEETS -->
+            <div class="lg:col-span-6 space-y-4">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4">
                     <div class="flex justify-between items-center mb-3">
                         <div class="flex items-center gap-2">
@@ -338,14 +345,12 @@
 
                     <input type="text" id="etalaseSearchInput" onkeyup="renderEtalase()" placeholder="🔍 Cari barang / barcode di etalase..." class="w-full mb-3 p-2.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/20 bg-slate-50/50 font-medium">
                     
-                    <div id="etalaseList" class="space-y-2 max-h-60 overflow-y-auto text-xs pr-1"></div>
+                    <div id="etalaseList" class="space-y-2 max-h-[680px] overflow-y-auto text-xs pr-1"></div>
                 </div>
-
             </div>
-
         </div>
 
-        <!-- TAB 2: HALAMAN KALKULATOR MODAL & HARGA JUAL -->
+        <!-- TAB 3: HALAMAN KALKULATOR MODAL & HARGA JUAL -->
         <div id="pageKalkulator" class="hidden max-w-2xl mx-auto bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
             <div class="flex items-center gap-2.5 border-b border-slate-100 pb-3">
                 <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg">🧮</div>
@@ -407,6 +412,75 @@
             </div>
         </div>
 
+        <!-- TAB 4: MENU KHUSUS PELATIHAN AI KEMASAN -->
+        <div id="pagePelatihan" class="hidden max-w-2xl mx-auto bg-white border border-purple-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-purple-100 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg">🤖</div>
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-800">Studio Pelatihan AI Kemasan Produk</h2>
+                        <p class="text-[11px] text-slate-400">Latih AI HP kamu untuk menghafal visual bungkus produk secara instan</p>
+                    </div>
+                </div>
+                <span id="trainStatusBadge" class="text-[10px] bg-purple-100 text-purple-800 px-2.5 py-1 rounded-full font-bold">Siap Merekam</span>
+            </div>
+
+            <!-- PILIH BARANG UNTUK DILATIH -->
+            <div class="space-y-1.5 text-xs">
+                <label class="block font-bold text-slate-700">📦 Pilih Barang Yang Ingin Diajari Ke AI:</label>
+                <select id="trainProductSelect" onchange="updateSampleCounterDisplay()" class="w-full p-2.5 border border-purple-200 rounded-xl font-bold bg-purple-50/50 text-purple-900 outline-none focus:ring-2 focus:ring-purple-500/30">
+                    <option value="">-- Pilih Barang dari Etalase --</option>
+                </select>
+            </div>
+
+            <!-- KAMERA REKAM PELATIHAN DEDICATED -->
+            <div class="relative overflow-hidden rounded-xl border-2 border-purple-300 bg-slate-950 min-h-[220px] flex items-center justify-center">
+                <div id="trainReader" class="w-full bg-black min-h-[220px] flex items-center justify-center"></div>
+                <div id="trainLiveOverlay" class="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[11px] px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+                    <span id="trainLiveText">Kamera Rekam Mati</span>
+                </div>
+            </div>
+
+            <!-- TOMBOL KONTROL PELATIHAN -->
+            <div class="space-y-3">
+                <div class="flex items-center gap-2">
+                    <button onclick="startTrainScanner()" class="flex-1 bg-purple-700 hover:bg-purple-800 text-white py-2.5 px-3 rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center gap-1">
+                        📷 Nyalakan Kamera Rekam
+                    </button>
+                    <button onclick="stopTrainScanner()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-3 rounded-xl text-xs font-bold transition">
+                        🛑 Stop
+                    </button>
+                </div>
+
+                <div class="bg-purple-50/80 border border-purple-200 p-3.5 rounded-xl space-y-2.5 text-xs">
+                    <div class="flex justify-between items-center font-bold text-purple-950">
+                        <span>Statistik Hafalan Produk Ini:</span>
+                        <span id="sampleCounterBadge" class="bg-purple-200 text-purple-900 px-2.5 py-0.5 rounded-full">0 Sampel</span>
+                    </div>
+
+                    <button id="recordBtn" 
+                        onmousedown="startRecordingSample(event)" 
+                        onmouseup="stopRecordingSample(event)" 
+                        ontouchstart="startRecordingSample(event)" 
+                        ontouchend="stopRecordingSample(event)" 
+                        class="w-full bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white py-3 px-3 rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-2 no-select">
+                        <span>📸</span> TAHAN UNTUK REKAM KEMASAN
+                    </button>
+                    <p class="text-[10px] text-slate-500 text-center">Tahan tombol sambil putar bungkus barang perlahan di depan kamera hingga mencapai 20-30 sampel.</p>
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                    <button onclick="saveKnnDatasetToLocalStorage()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1">
+                        <span>💾</span> Simpan Memori AI Permanen
+                    </button>
+                    <button onclick="clearKnnDataset()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-2.5 rounded-xl text-xs font-bold transition" title="Hapus Semua Memori AI">
+                        🗑️ Hapus
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- LOGIKA JAVASCRIPT LENGKAP UTUH -->
@@ -414,8 +488,12 @@
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxpE7MseHNxo-UpJuNA_aZYAZv0jJXX6usliUfw9HolBVTJIhDnxomf4e-GIwOuqF5R/exec";
 
         let html5QrCode = null;
+        let aturHtml5QrCode = null;
         let nativeStream = null;
+        let aturNativeStream = null;
+        let trainNativeStream = null;
         let nativeAnimFrame = null;
+        let aturAnimFrame = null;
         let ocrInterval = null;
         let isLockingScan = false;
         let editingId = null;
@@ -431,7 +509,7 @@
         let lastFailTime = 0;
         let failTimer = null;
 
-        // VARIABLE AI LOKAL (MOBILE NET + KNN) - PERBAIKAN SHADOWING VARIABLE
+        // VARIABLE AI LOKAL (MOBILE NET + KNN)
         let knnInstance = null;
         let mobilenetModel = null;
         let isKnnLoaded = false;
@@ -460,19 +538,155 @@
             }
         }
 
-        // FUNGSI REKAM SAMPEL AI LOKAL KEMASAN (PENANGANAN TAHAN HP)
+        // POPULATE OPTION DROPDOWN BARANG UNTUK PELATIHAN AI
+        function populateTrainProductSelect() {
+            const select = document.getElementById('trainProductSelect');
+            if (!select) return;
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">-- Pilih Barang dari Etalase --</option>';
+            
+            for (let id in products) {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.innerText = `${products[id].name} (${formatRupiah(products[id].price)})`;
+                select.appendChild(opt);
+            }
+            if (currentVal && products[currentVal]) select.value = currentVal;
+        }
+
+        // SCANNER KAMERA KHUSUS MENU ATUR BARANG (AUTO-FILL BARCODE FORM)
+        async function startAturScanner() {
+            stopAturScanner();
+            stopScanner();
+            stopTrainScanner();
+            const liveText = document.getElementById('aturLiveText');
+            if (liveText) liveText.innerText = "Kamera Aktif...";
+
+            if ('BarcodeDetector' in window) {
+                try {
+                    const barcodeDetector = new BarcodeDetector({
+                        formats: ['code_128', 'ean_13', 'ean_8', 'qr_code', 'upc_a', 'upc_e', 'code_39']
+                    });
+
+                    aturNativeStream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: "environment", frameRate: { ideal: 30 }, width: { ideal: 1280 } }
+                    });
+
+                    const video = document.createElement('video');
+                    video.srcObject = aturNativeStream;
+                    video.setAttribute("playsinline", true);
+                    video.muted = true;
+                    await video.play();
+
+                    const readerDiv = document.getElementById("aturReader");
+                    readerDiv.innerHTML = "";
+                    readerDiv.appendChild(video);
+                    video.className = "w-full h-[150px] object-cover rounded-xl";
+
+                    async function renderFrame() {
+                        if (!aturNativeStream || !aturNativeStream.active) return;
+                        try {
+                            const barcodes = await barcodeDetector.detect(video);
+                            if (barcodes.length > 0) {
+                                const code = barcodes[0].rawValue;
+                                document.getElementById('barcodeInput').value = code;
+                                triggerVibration();
+                                if (liveText) liveText.innerText = `Tertangkap: ${code}`;
+                            }
+                        } catch (e) {}
+                        aturAnimFrame = requestAnimationFrame(renderFrame);
+                    }
+                    renderFrame();
+                    return;
+                } catch (err) {}
+            }
+
+            aturHtml5QrCode = new Html5Qrcode("aturReader");
+            aturHtml5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 20, qrbox: { width: 220, height: 130 } },
+                (barcode) => {
+                    document.getElementById('barcodeInput').value = barcode;
+                    triggerVibration();
+                    if (liveText) liveText.innerText = `Tertangkap: ${barcode}`;
+                },
+                () => {}
+            );
+        }
+
+        function stopAturScanner() {
+            if (aturAnimFrame) { cancelAnimationFrame(aturAnimFrame); aturAnimFrame = null; }
+            if (aturNativeStream) {
+                aturNativeStream.getTracks().forEach(track => track.stop());
+                aturNativeStream = null;
+            }
+            if (aturHtml5QrCode && aturHtml5QrCode.isScanning) {
+                aturHtml5QrCode.stop().then(() => { document.getElementById("aturReader").innerHTML = ""; }).catch(e => {});
+            } else {
+                const readerDiv = document.getElementById("aturReader");
+                if (readerDiv) readerDiv.innerHTML = "";
+            }
+            const liveText = document.getElementById('aturLiveText');
+            if (liveText) liveText.innerText = "Kamera Mati";
+        }
+
+        // SCANNER KAMERA KHUSUS MENU PELATIHAN AI
+        async function startTrainScanner() {
+            stopTrainScanner();
+            stopScanner();
+            stopAturScanner();
+            const liveText = document.getElementById('trainLiveText');
+            if (liveText) liveText.innerText = "Menyalakan Kamera Rekam...";
+
+            try {
+                trainNativeStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+
+                const video = document.createElement('video');
+                video.srcObject = trainNativeStream;
+                video.setAttribute("playsinline", true);
+                video.muted = true;
+                await video.play();
+
+                const readerDiv = document.getElementById("trainReader");
+                readerDiv.innerHTML = "";
+                readerDiv.appendChild(video);
+                video.className = "w-full h-[220px] object-cover rounded-xl";
+
+                if (liveText) liveText.innerText = "Kamera Rekam Aktif";
+            } catch (err) {
+                if (liveText) liveText.innerText = "Gagal Buka Kamera";
+            }
+        }
+
+        function stopTrainScanner() {
+            stopRecordingSample();
+            if (trainNativeStream) {
+                trainNativeStream.getTracks().forEach(track => track.stop());
+                trainNativeStream = null;
+            }
+            const readerDiv = document.getElementById("trainReader");
+            if (readerDiv) readerDiv.innerHTML = "";
+            const liveText = document.getElementById('trainLiveText');
+            if (liveText) liveText.innerText = "Kamera Rekam Mati";
+        }
+
+        // FUNGSI REKAM SAMPEL AI LOKAL KEMASAN
         function startRecordingSample(e) {
             if (e && e.cancelable) e.preventDefault();
 
-            const targetId = editingId || (selectedLinkId !== 'NEW' && selectedLinkId !== 'LINK' ? selectedLinkId : null);
+            const select = document.getElementById('trainProductSelect');
+            const targetId = select ? select.value : null;
+
             if (!targetId) {
-                alert("Pilih atau buat barang terlebih dahulu di etalase sebelum merekam kemasan!");
+                alert("Pilih barang dari dropdown etalase terlebih dahulu sebelum merekam!");
                 return;
             }
 
-            const videoElement = document.querySelector("#reader video");
+            const videoElement = document.querySelector("#trainReader video");
             if (!videoElement || videoElement.readyState !== 4) {
-                alert("Nyalakan kamera (Scan Kilat) terlebih dahulu!");
+                alert("Nyalakan Kamera Rekam terlebih dahulu!");
                 return;
             }
 
@@ -482,8 +696,9 @@
             }
 
             const recordBtn = document.getElementById('recordBtn');
-            recordBtn.innerText = "🔴 Perekaman Aktif...";
-            recordBtn.classList.replace('bg-purple-700', 'bg-rose-600');
+            recordBtn.innerText = "🔴 SEDANG MEREKAM SAMPEL...";
+            recordBtn.classList.replace('from-purple-700', 'from-rose-600');
+            recordBtn.classList.replace('to-indigo-700', 'to-red-600');
 
             if (recordInterval) clearInterval(recordInterval);
 
@@ -492,8 +707,8 @@
                     const logits = mobilenetModel.infer(videoElement, true);
                     knnInstance.addExample(logits, targetId);
                     updateSampleCounterDisplay();
-                } catch (e) {
-                    console.error("Gagal rekam frame AI:", e);
+                } catch (err) {
+                    console.error("Gagal rekam frame AI:", err);
                 }
             }, 150);
         }
@@ -507,17 +722,24 @@
             }
             const recordBtn = document.getElementById('recordBtn');
             if (recordBtn) {
-                recordBtn.innerText = "📸 Tahan Utk Rekam Kemasan";
-                recordBtn.classList.replace('bg-rose-600', 'bg-purple-700');
+                recordBtn.innerText = "📸 TAHAN UNTUK REKAM KEMASAN";
+                recordBtn.classList.replace('from-rose-600', 'from-purple-700');
+                recordBtn.classList.replace('to-red-600', 'to-indigo-700');
             }
         }
 
         function updateSampleCounterDisplay() {
             const counter = document.getElementById('sampleCounterBadge');
+            const select = document.getElementById('trainProductSelect');
+            const targetId = select ? select.value : null;
+
             if (knnInstance && counter) {
-                const totalSamples = knnInstance.getNumClasses() > 0 ? knnInstance.getClassExampleCount() : {};
-                let count = 0;
-                Object.values(totalSamples).forEach(c => count += c);
+                if (!targetId) {
+                    counter.innerText = "0 Sampel";
+                    return;
+                }
+                const exampleCount = knnInstance.getClassExampleCount();
+                const count = exampleCount[targetId] || 0;
                 counter.innerText = `${count} Sampel AI`;
             }
         }
@@ -559,7 +781,7 @@
             }
         }
 
-        // INSTANT CLASSIFY VIA LOKAL AI (< 100 MS)
+        // INSTANT CLASSIFY VIA LOKAL AI (< 100 MS) DI PENJUALAN
         async function predictLocalAIInstant(videoElement) {
             if (isLockingScan || !isKnnLoaded || !knnInstance || knnInstance.getNumClasses() === 0) return;
             try {
@@ -617,23 +839,49 @@
             clearCart();
         }
 
-        // LOGIKA SWITCH TAB HALAMAN
+        // LOGIKA SWITCH TAB HALAMAN (4 MENU UTAMA)
         function switchTab(tabName) {
             const pageKasir = document.getElementById('pageKasir');
+            const pageAturBarang = document.getElementById('pageAturBarang');
             const pageKalkulator = document.getElementById('pageKalkulator');
+            const pagePelatihan = document.getElementById('pagePelatihan');
+
             const btnKasir = document.getElementById('tabKasirBtn');
+            const btnAtur = document.getElementById('tabAturBtn');
             const btnKalkulator = document.getElementById('tabKalkulatorBtn');
+            const btnPelatihan = document.getElementById('tabPelatihanBtn');
+
+            const activeBtnClass = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-white shadow-xs";
+            const inactiveBtnClass = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900";
+
+            // Matikan semua kamera aktif saat berpindah tab
+            stopScanner();
+            stopAturScanner();
+            stopTrainScanner();
+
+            pageKasir.classList.add('hidden');
+            pageAturBarang.classList.add('hidden');
+            pageKalkulator.classList.add('hidden');
+            pagePelatihan.classList.add('hidden');
+
+            btnKasir.className = inactiveBtnClass;
+            btnAtur.className = inactiveBtnClass;
+            btnKalkulator.className = inactiveBtnClass;
+            btnPelatihan.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-purple-700 bg-purple-100/70 hover:bg-purple-200";
 
             if (tabName === 'kasir') {
                 pageKasir.classList.remove('hidden');
-                pageKalkulator.classList.add('hidden');
-                btnKasir.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white shadow-xs";
-                btnKalkulator.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900";
-            } else {
-                pageKasir.classList.add('hidden');
+                btnKasir.className = activeBtnClass + " bg-emerald-600";
+            } else if (tabName === 'atur') {
+                pageAturBarang.classList.remove('hidden');
+                btnAtur.className = activeBtnClass + " bg-slate-800";
+            } else if (tabName === 'kalkulator') {
                 pageKalkulator.classList.remove('hidden');
-                btnKalkulator.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-purple-600 text-white shadow-xs";
-                btnKasir.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900";
+                btnKalkulator.className = activeBtnClass + " bg-purple-600";
+            } else if (tabName === 'pelatihan') {
+                pagePelatihan.classList.remove('hidden');
+                btnPelatihan.className = activeBtnClass + " bg-purple-700";
+                populateTrainProductSelect();
             }
         }
 
@@ -754,11 +1002,13 @@
             }
         }
 
-        // SCANNER KILAT NATIVE HARDWARE SPEED
+        // SCANNER KILAT NATIVE HARDWARE SPEED (DI PENJUALAN)
         async function startScanner() {
             stopScanner();
+            stopAturScanner();
+            stopTrainScanner();
             const liveText = document.getElementById('liveTextDisplay');
-            if (liveText) liveText.innerText = "⚡ Menyalakan Kamera Super Cepat...";
+            if (liveText) liveText.innerText = "⚡ Menyalakan Kamera Kasir...";
 
             if ('BarcodeDetector' in window) {
                 try {
@@ -812,17 +1062,20 @@
         }
 
         function stopScanner() {
-            stopRecordingSample();
             if (ocrInterval) { clearInterval(ocrInterval); ocrInterval = null; }
             if (nativeAnimFrame) { cancelAnimationFrame(nativeAnimFrame); nativeAnimFrame = null; }
             if (nativeStream) { nativeStream.getTracks().forEach(track => track.stop()); nativeStream = null; }
             if (html5QrCode && html5QrCode.isScanning) {
                 html5QrCode.stop().then(() => { document.getElementById("reader").innerHTML = ""; }).catch(e => {});
-            } else { document.getElementById("reader").innerHTML = ""; }
+            } else { 
+                const readerDiv = document.getElementById("reader");
+                if (readerDiv) readerDiv.innerHTML = ""; 
+            }
             
             const liveText = document.getElementById('liveTextDisplay');
             if (liveText) liveText.innerText = "Kamera mati.";
-            document.getElementById('failIndicator').classList.add('hidden');
+            const failInd = document.getElementById('failIndicator');
+            if (failInd) failInd.classList.add('hidden');
         }
 
         // AKSI SCAN AI GEMINI LIVE STREAM
@@ -987,6 +1240,7 @@
                 const data = await response.json();
                 products = data || {};
                 renderEtalase();
+                populateTrainProductSelect();
                 if (liveText) liveText.innerText = "✅ Etalase Google Sheets siap!";
             } catch (err) {
                 if (liveText) liveText.innerText = "❌ Gagal terhubung ke Google Sheets.";
@@ -1020,6 +1274,7 @@
                 if (liveText) liveText.innerText = "✅ Barang berhasil dihapus!";
                 delete products[id];
                 renderEtalase();
+                populateTrainProductSelect();
                 await loadProductsFromSheets();
             } catch (err) { alert("Gagal menghapus dari Google Sheets."); }
         }
@@ -1374,6 +1629,7 @@
             } else {
                 document.getElementById('barcodeInput').value = key;
                 showScanFeedback(false, "Barcode Baru! Pilih Buat / Tautkan"); triggerVibration();
+                switchTab('atur');
                 setStorageMode('LINK');
                 document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
             }
@@ -1489,6 +1745,7 @@
         function editProduct(id) {
             editingId = id;
             const item = products[id];
+            switchTab('atur');
             setStorageMode('NEW');
 
             document.getElementById('barcodeInput').value = (item.barcodes && item.barcodes.length) ? item.barcodes[0] : '';
