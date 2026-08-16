@@ -70,7 +70,7 @@
                     <h1 class="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Kasir Sembako Pintar</h1>
                     <p class="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Scan Kilat, Gemini AI, OCR, & Fast KNN AI
+                        Scan Kilat, Gemini AI, & On-Device AI
                     </p>
                 </div>
             </div>
@@ -132,15 +132,12 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-1.5 mt-3">
-                        <button onclick="startScanner()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1">
+                    <div class="flex items-center gap-2 mt-3">
+                        <button onclick="startScanner()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
                             <i class="fa-solid fa-bolt"></i> Scan Kilat
                         </button>
-                        <button onclick="triggerAIScan()" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1">
+                        <button onclick="triggerAIScan()" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
                             <i class="fa-solid fa-wand-magic-sparkles"></i> Gemini AI
-                        </button>
-                        <button onclick="doOCR()" class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-2.5 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all flex items-center justify-center shrink-0" title="Scan Teks Kemasan (OCR)">
-                            <i class="fa-solid fa-font"></i> OCR
                         </button>
                         <button id="micBtn" onclick="toggleVoice()" title="Input Suara" class="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white p-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-600/20 active:scale-[0.98] transition-all flex items-center justify-center shrink-0">
                             <i class="fa-solid fa-microphone"></i>
@@ -510,6 +507,7 @@
         let products = {};
         let cart = {}; 
         let lastScannedKey = null;
+        let lastScannedId = null;
         let lastScanTime = 0;
         let lastFailTime = 0;
         let failTimer = null;
@@ -850,7 +848,7 @@
             }
         }
 
-        // AKSI KLASIFIKASI AI INSTANT KASIR (VERSI AWAL CEPAT + KUNCI STABIL)
+        // AKSI KLASIFIKASI AI INSTANT PENJUALAN KASIR (DENGAN LOCKING COOLDOWN)
         async function predictLocalAIInstant(videoElement) {
             const isToggleAI = document.getElementById('toggleAIInstant');
             if (!isToggleAI || !isToggleAI.checked) return;
@@ -860,65 +858,32 @@
             try {
                 const logits = mobilenetModel.infer(videoElement, true);
                 const res = await knnInstance.predictClass(logits);
-                logits.dispose(); // Langsung hapus memori frame
+                logits.dispose();
 
                 const matchedId = res.label;
                 const confidence = res.confidences[matchedId] || 0;
 
-                // Jika AI melihat Latar Kosong / Karpet -> Diam saja
+                // Abaikan jika melihat Latar Belakang Kosong
                 if (matchedId === 'BACKGROUND_EMPTY') return;
 
-                // Jika terdeteksi Produk dengan Keyakinan Tinggi (>= 80%)
-                if (matchedId && products[matchedId] && confidence >= 0.80) {
-                    isLockingScan = true; // Kunci agar tidak ter-scan terus-menerus
+                // Jika terdeteksi Kemasan Barang (Keyakinan >= 75%)
+                if (matchedId && products[matchedId] && confidence >= 0.75) {
+                    const now = Date.now();
+                    if (matchedId === lastScannedId && (now - lastScanTime) < 3000) return;
+
+                    isLockingScan = true;
+                    lastScannedId = matchedId;
+                    lastScanTime = now;
+
                     showScanFeedback(true, ` Instant AI: ${products[matchedId].name}`);
                     triggerVibration();
                     addToCart(matchedId);
-                    
-                    // Delay 2.5 detik sebelum scan berikutnya aktif
+
+                    // Kunci delay 2.5 detik agar tidak ter-scan terus-menerus
                     setTimeout(() => { isLockingScan = false; }, 2500);
                 }
             } catch (e) {
                 console.error("Error predict AI:", e);
-            }
-        }
-
-        // FUNGSI SCAN TEKS KEMASAN (OCR TESSERACT)
-        async function doOCR() {
-            const videoElement = document.querySelector("#reader video");
-            const liveText = document.getElementById('liveTextDisplay');
-            
-            if (!videoElement || videoElement.readyState !== 4) {
-                if (liveText) liveText.innerText = " Menyalakan kamera...";
-                await startScanner();
-                setTimeout(() => { doOCR(); }, 1200);
-                return;
-            }
-
-            if (liveText) liveText.innerText = " Membaca Teks Kemasan (OCR)...";
-
-            const canvas = document.createElement("canvas");
-            canvas.width = videoElement.videoWidth || 640;
-            canvas.height = videoElement.videoHeight || 480;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-
-            try {
-                const worker = await Tesseract.createWorker('ind');
-                const ret = await worker.recognize(canvas);
-                await worker.terminate();
-
-                const ocrResultText = ret.data.text;
-                if (ocrResultText && ocrResultText.trim().length > 0) {
-                    if (liveText) liveText.innerText = ` Teks Terbaca: "${ocrResultText.trim().substring(0, 30)}..."`;
-                    matchAndAddToCart(ocrResultText, true);
-                } else {
-                    showScanFeedback(false, "Teks Tidak Terbaca");
-                    if (liveText) liveText.innerText = " Tidak ada teks yang terbaca di kemasan.";
-                }
-            } catch (err) {
-                showScanFeedback(false, "Gagal OCR");
-                if (liveText) liveText.innerText = " Gagal membaca teks kemasan.";
             }
         }
 
@@ -1122,7 +1087,7 @@
             }
         }
 
-        // SCANNER KILAT (PENJUALAN)
+        // SCANNER KILAT (PENJUALAN KASIR)
         async function startScanner() {
             stopScanner();
             stopAturScanner();
@@ -1736,7 +1701,7 @@
         function handleDetectedKey(key) {
             if (isLockingScan) return;
             const now = Date.now();
-            if (key === lastScannedKey && (now - lastScanTime) < 2000) return;
+            if (key === lastScannedKey && (now - lastScanTime) < 2500) return;
 
             lastScannedKey = key; lastScanTime = now;
             const matchedId = findProductIdByBarcode(key);
@@ -1744,7 +1709,7 @@
             if (matchedId) {
                 isLockingScan = true;
                 showScanFeedback(true, products[matchedId].name); triggerVibration(); addToCart(matchedId);
-                setTimeout(() => { isLockingScan = false; }, 2000);
+                setTimeout(() => { isLockingScan = false; }, 2500);
             } else {
                 showScanFeedback(false, `Barcode Belum Ada`);
                 triggerVibration();
@@ -1781,7 +1746,7 @@
                     <div class="text-center py-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                         <span class="text-2xl block mb-1 text-slate-400"><i class="fa-solid fa-cart-arrow-down"></i></span>
                         <p class="text-slate-400 font-medium">Keranjang masih kosong</p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">Scan barcode kilat, AI Live, OCR, sebut nama (mic), atau cari manual.</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Scan barcode kilat, AI Live, sebut nama (mic), atau cari manual.</p>
                     </div>
                 `;
             } else {
