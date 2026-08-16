@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Sembako Pintar - Ultra Fast Scan & Smart AI Filter</title>
+    <title>Kasir Sembako Pintar - Ultra Fast Scan & No False Scan AI</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -68,7 +68,7 @@
                     <h1 class="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Kasir Sembako Pintar</h1>
                     <p class="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Scan Kilat, Gemini AI, & AI Kemasan Lokal
+                        Scan Kilat, Gemini AI, & AI Kemasan Anti-Palsu
                     </p>
                 </div>
             </div>
@@ -97,7 +97,14 @@
                         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                             <span>⚡</span> Scanner Penjualan
                         </h2>
-                        <span id="aiStatusBadge" class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Memuat AI Lokal...</span>
+                        <div class="flex items-center gap-2">
+                            <label class="inline-flex items-center cursor-pointer text-[10px] font-bold text-slate-600 gap-1">
+                                <input type="checkbox" id="toggleAIInstant" checked class="sr-only peer">
+                                <div class="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-600 relative"></div>
+                                AI Kemasan
+                            </label>
+                            <span id="aiStatusBadge" class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Memuat...</span>
+                        </div>
                     </div>
 
                     <div class="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950 min-h-[190px] flex items-center justify-center scan-animation">
@@ -128,7 +135,7 @@
                             <span>⚡</span> Scan Kilat
                         </button>
                         <button onclick="triggerAIScan()" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1">
-                            <span>✨</span> Scan AI (Live)
+                            <span>✨</span> Gemini AI
                         </button>
                         <button id="micBtn" onclick="toggleVoice()" title="Input Suara" class="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white p-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-600/20 active:scale-[0.98] transition-all flex items-center justify-center shrink-0">
                             🎙️
@@ -397,10 +404,16 @@
                 <span id="trainStatusBadge" class="text-[10px] bg-purple-100 text-purple-800 px-2.5 py-1 rounded-full font-bold">Siap Merekam</span>
             </div>
 
+            <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl text-xs text-amber-900 space-y-1">
+                <p class="font-bold">⚠️ Agar Tidak Ter-Scan Palsu (Sangat Penting):</p>
+                <p class="text-[11px]">Rekam juga <b>"Bukan Barang / Latar Belakang Kosong"</b> agar AI paham saat kamera cuma mengarah ke karpet/lantai/meja kosong.</p>
+            </div>
+
             <div class="space-y-1.5 text-xs">
-                <label class="block font-bold text-slate-700">📦 Pilih Barang Yang Ingin Diajari Ke AI:</label>
+                <label class="block font-bold text-slate-700">📦 Pilih Target Yang Ingin Diajari Ke AI:</label>
                 <select id="trainProductSelect" onchange="updateSampleCounterDisplay()" class="w-full p-2.5 border border-purple-200 rounded-xl font-bold bg-purple-50/50 text-purple-900 outline-none focus:ring-2 focus:ring-purple-500/30">
                     <option value="">-- Pilih Barang dari Etalase --</option>
+                    <option value="BACKGROUND_EMPTY" class="text-rose-600 font-bold">🚫 [REKAM LATAR KOSONG / KARPET / MEJA]</option>
                 </select>
             </div>
 
@@ -424,7 +437,7 @@
 
                 <div class="bg-purple-50/80 border border-purple-200 p-3.5 rounded-xl space-y-2.5 text-xs">
                     <div class="flex justify-between items-center font-bold text-purple-950">
-                        <span>Statistik Hafalan Produk Ini:</span>
+                        <span>Statistik Hafalan Target Ini:</span>
                         <span id="sampleCounterBadge" class="bg-purple-200 text-purple-900 px-2.5 py-0.5 rounded-full">0 Sampel</span>
                     </div>
 
@@ -434,9 +447,9 @@
                         ontouchstart="startRecordingSample(event)" 
                         ontouchend="stopRecordingSample(event)" 
                         class="w-full bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white py-3 px-3 rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-2 no-select">
-                        <span>📸</span> TAHAN UNTUK REKAM KEMASAN
+                        <span>📸</span> TAHAN UNTUK REKAM SAMPEL
                     </button>
-                    <p class="text-[10px] text-slate-500 text-center">Tahan tombol sambil putar bungkus barang perlahan di depan kamera hingga mencapai 20-30 sampel.</p>
+                    <p class="text-[10px] text-slate-500 text-center">Tahan tombol sambil gerakkan HP perlahan di depan objek hingga 20-30 sampel.</p>
                 </div>
 
                 <div class="flex gap-2 pt-1">
@@ -444,10 +457,10 @@
                         <span>💾</span> Simpan Memori AI Permanen
                     </button>
                     <button onclick="clearKnnProductDataset()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2.5 rounded-xl text-xs font-bold transition" title="Hapus Sampel Produk Ini">
-                        🗑️ Hapus Barang Ini
+                        🗑️ Hapus Target Ini
                     </button>
                     <button onclick="clearKnnDataset()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-2.5 rounded-xl text-xs font-bold transition" title="Hapus Semua Memori AI">
-                        💥 Clear All
+                        💥 Reset Memori
                     </button>
                 </div>
             </div>
@@ -497,7 +510,7 @@
                 loadKnnDatasetFromLocalStorage();
 
                 if (statusBadge) {
-                    statusBadge.innerText = "⚡ On-Device AI Aktif";
+                    statusBadge.innerText = "⚡ AI Ready";
                     statusBadge.className = "text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold";
                 }
             } catch (err) {
@@ -514,7 +527,10 @@
             const select = document.getElementById('trainProductSelect');
             if (!select) return;
             const currentVal = select.value;
-            select.innerHTML = '<option value="">-- Pilih Barang dari Etalase --</option>';
+            select.innerHTML = `
+                <option value="">-- Pilih Barang dari Etalase --</option>
+                <option value="BACKGROUND_EMPTY" class="text-rose-600 font-bold">🚫 [REKAM LATAR KOSONG / KARPET / MEJA]</option>
+            `;
             
             for (let id in products) {
                 const opt = document.createElement('option');
@@ -522,7 +538,7 @@
                 opt.innerText = `${products[id].name} (${formatRupiah(products[id].price)})`;
                 select.appendChild(opt);
             }
-            if (currentVal && products[currentVal]) select.value = currentVal;
+            if (currentVal && (products[currentVal] || currentVal === 'BACKGROUND_EMPTY')) select.value = currentVal;
         }
 
         // SCANNER KAMERA KHUSUS MENU ATUR BARANG (AUTO-FILL BARCODE FORM)
@@ -643,7 +659,7 @@
             if (liveText) liveText.innerText = "Kamera Rekam Mati";
         }
 
-        // FUNGSI REKAM SAMPEL AI LOKAL KEMASAN
+        // FUNGSI REKAM SAMPEL AI LOKAL KEMASAN / BACKGROUND
         function startRecordingSample(e) {
             if (e && e.cancelable) e.preventDefault();
 
@@ -651,7 +667,7 @@
             const targetId = select ? select.value : null;
 
             if (!targetId) {
-                alert("Pilih barang dari dropdown etalase terlebih dahulu sebelum merekam!");
+                alert("Pilih barang atau [Latar Belakang Kosong] terlebih dahulu sebelum merekam!");
                 return;
             }
 
@@ -693,7 +709,7 @@
             }
             const recordBtn = document.getElementById('recordBtn');
             if (recordBtn) {
-                recordBtn.innerText = "📸 TAHAN UNTUK REKAM KEMASAN";
+                recordBtn.innerText = "📸 TAHAN UNTUK REKAM SAMPEL";
                 recordBtn.classList.replace('from-rose-600', 'from-purple-700');
                 recordBtn.classList.replace('to-red-600', 'to-indigo-700');
             }
@@ -746,16 +762,17 @@
         function clearKnnProductDataset() {
             const select = document.getElementById('trainProductSelect');
             const targetId = select ? select.value : null;
-            if (!targetId || !products[targetId]) {
-                alert("Pilih barang terlebih dahulu di dropdown!");
+            if (!targetId) {
+                alert("Pilih target terlebih dahulu di dropdown!");
                 return;
             }
-            if (confirm(`Hapus sampel hafalan AI khusus untuk "${products[targetId].name}"?`)) {
+            const targetName = (targetId === 'BACKGROUND_EMPTY') ? "Latar Belakang Kosong" : (products[targetId] ? products[targetId].name : targetId);
+            if (confirm(`Hapus sampel hafalan AI khusus untuk "${targetName}"?`)) {
                 if (knnInstance) {
                     knnInstance.clearClass(targetId);
                     saveKnnDatasetToLocalStorage();
                     updateSampleCounterDisplay();
-                    alert(`Sampel AI untuk ${products[targetId].name} berhasil dibersihkan.`);
+                    alert(`Sampel AI untuk ${targetName} berhasil dibersihkan.`);
                 }
             }
         }
@@ -769,21 +786,37 @@
             }
         }
 
-        // INSTANT CLASSIFY VIA LOKAL AI (< 100 MS) DENGAN COSINE SIMILARITY FILTER (PERBAIKAN SCAN PALSU)
+        // PENCEGAH TER-SCAN PALSU DENGAN MULTI-CLASS CHECK & COSINE SIMILARITY
         async function predictLocalAIInstant(videoElement) {
+            const isToggleAI = document.getElementById('toggleAIInstant');
+            if (!isToggleAI || !isToggleAI.checked) return;
+
             if (isLockingScan || !isKnnLoaded || !knnInstance || knnInstance.getNumClasses() === 0) return;
+            
             try {
                 const currentLogits = mobilenetModel.infer(videoElement, true);
                 const res = await knnInstance.predictClass(currentLogits);
                 
                 const matchedId = res.label;
+
+                // 1. ABAIKAN APABILA TERDETEKSI SEBAGAI LATAR KOSONG / BACKGROUND
+                if (matchedId === 'BACKGROUND_EMPTY') {
+                    currentLogits.dispose();
+                    return;
+                }
+
                 if (!matchedId || !products[matchedId]) {
                     currentLogits.dispose();
                     return;
                 }
 
-                // Hitung Cosine Similarity antara frame kamera sekarang dengan Centroid (rata-rata sampel) barang yang cocok
+                // 2. CEK PERSENTASE KEMIRIPAN VEKTOR
                 const dataset = knnInstance.getClassifierDataset();
+                const totalClasses = Object.keys(dataset).length;
+
+                // Jika baru ada 1 kelas produk saja tanpa background, wajibkan tingkat kemiripan sangat tinggi (0.88)
+                const minThreshold = (totalClasses === 1) ? 0.88 : 0.82;
+
                 if (dataset[matchedId]) {
                     const similarity = tf.tidy(() => {
                         const centroid = dataset[matchedId].mean(0);
@@ -797,8 +830,7 @@
 
                     currentLogits.dispose();
 
-                    // Hanya anggap SCAN BERHASIL jika kemiripan visual BENAR-BENAR COCOK (>= 0.82 / 82%)
-                    if (similarity >= 0.82 && res.confidences[matchedId] >= 0.70) {
+                    if (similarity >= minThreshold && res.confidences[matchedId] >= 0.75) {
                         isLockingScan = true;
                         showScanFeedback(true, `⚡ Instant AI: ${products[matchedId].name}`);
                         triggerVibration();
