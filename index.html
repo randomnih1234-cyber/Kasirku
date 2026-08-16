@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Sembako Pintar - Ultra Fast Scan, AI Live & On-Device AI</title>
+    <title>Kasir Sembako Pintar - Ultra Fast Scan & On-Device AI</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,7 +15,7 @@
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- TensorFlow.js & On-Device AI Classifier (Scan Kemasan Instan) -->
+    <!-- TensorFlow.js & On-Device AI Classifier -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier@1.2.4/dist/knn-classifier.min.js"></script>
@@ -51,6 +51,11 @@
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .no-select {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen p-3 sm:p-5 antialiased selection:bg-emerald-500 selection:text-white">
@@ -144,14 +149,19 @@
                     <div class="mt-3 p-3 bg-purple-50/70 border border-purple-200/80 rounded-xl space-y-2">
                         <div class="flex justify-between items-center">
                             <span class="text-[11px] font-bold text-purple-950 flex items-center gap-1">
-                                🤖 Pelatihan AI Kemasan Lokal (Tanpa Internet)
+                                🤖 Pelatihan AI Kemasan Lokal
                             </span>
                             <span id="sampleCounterBadge" class="text-[10px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded-full font-bold">0 Sampel</span>
                         </div>
                         <p class="text-[10px] text-slate-500">Pilih/edit barang di etalase, arahkan kamera ke bungkusnya, lalu tahan tombol rekam di bawah.</p>
                         
                         <div class="flex gap-1.5">
-                            <button id="recordBtn" onmousedown="startRecordingSample()" onmouseup="stopRecordingSample()" ontouchstart="startRecordingSample()" ontouchend="stopRecordingSample()" class="flex-1 bg-purple-700 hover:bg-purple-800 text-white py-2 px-2 rounded-lg text-xs font-bold transition shadow-xs flex items-center justify-center gap-1 select-none">
+                            <button id="recordBtn" 
+                                onmousedown="startRecordingSample(event)" 
+                                onmouseup="stopRecordingSample(event)" 
+                                ontouchstart="startRecordingSample(event)" 
+                                ontouchend="stopRecordingSample(event)" 
+                                class="flex-1 bg-purple-700 hover:bg-purple-800 text-white py-2 px-2 rounded-lg text-xs font-bold transition shadow-xs flex items-center justify-center gap-1 no-select">
                                 📸 Tahan Utk Rekam Kemasan
                             </button>
                             <button onclick="saveKnnDatasetToLocalStorage()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-lg text-xs font-bold transition shadow-xs shrink-0" title="Simpan Hafalan AI">
@@ -205,11 +215,8 @@
                             </div>
                         </div>
 
-                        <!-- Quick Cash & QRIS Buttons -->
+                        <!-- Quick Cash Buttons -->
                         <div class="flex gap-1.5 overflow-x-auto pt-1">
-                            <button onclick="openQrisModal()" class="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-[11px] font-bold shadow-sm transition shrink-0 flex items-center gap-1">
-                                📱 Bayar QRIS
-                            </button>
                             <button onclick="setPaidAmount('exact')" class="px-2.5 py-1.5 bg-white border border-emerald-200 hover:border-emerald-400 text-emerald-800 rounded-lg text-[11px] font-bold shadow-xs hover:bg-emerald-100/50 transition shrink-0">Uang Pas</button>
                             <button onclick="setPaidAmount(10)" class="px-2.5 py-1.5 bg-white border border-emerald-200 hover:border-emerald-400 text-emerald-800 rounded-lg text-[11px] font-bold shadow-xs hover:bg-emerald-100/50 transition shrink-0">10rb</button>
                             <button onclick="setPaidAmount(20)" class="px-2.5 py-1.5 bg-white border border-emerald-200 hover:border-emerald-400 text-emerald-800 rounded-lg text-[11px] font-bold shadow-xs hover:bg-emerald-100/50 transition shrink-0">20rb</button>
@@ -302,12 +309,6 @@
                                 </div>
                                 <button type="button" onclick="clearImageChoice()" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg font-bold text-xs">✕ Hapus Foto</button>
                             </div>
-                        </div>
-
-                        <!-- SETTING LINK FOTO QRIS TOKO -->
-                        <div class="space-y-1.5 border-t border-slate-100 pt-2">
-                            <label class="block text-[11px] font-bold text-blue-900">📱 Link Foto Kode QRIS Toko Kamu (SeaBank):</label>
-                            <input type="url" id="qrisUrlInput" onchange="saveQrisUrl(this.value)" placeholder="https://domain.com/qris-toko.jpg" class="w-full p-2 border border-blue-200 rounded-xl font-mono text-[11px] bg-blue-50/50 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20">
                         </div>
 
                         <div class="pt-1">
@@ -408,39 +409,6 @@
 
     </div>
 
-    <!-- MODAL DISPLAY KODE QRIS -->
-    <div id="qrisModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 transition-all">
-        <div class="bg-white rounded-3xl p-5 max-w-xs w-full text-center space-y-4 shadow-2xl border border-slate-100">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                <span class="font-bold text-slate-800 text-sm flex items-center gap-1.5">📱 Pembayaran QRIS</span>
-                <button onclick="closeQrisModal()" class="text-slate-400 hover:text-slate-600 font-bold text-base">✕</button>
-            </div>
-
-            <div class="bg-indigo-50/70 border border-indigo-100 p-3 rounded-2xl">
-                <p class="text-[11px] text-slate-500 font-medium">Total Tagihan Pembeli:</p>
-                <p id="qrisTotalAmount" class="text-xl font-extrabold text-indigo-700">Rp 0</p>
-            </div>
-
-            <div class="p-3 bg-white border border-slate-200 rounded-2xl shadow-inner flex flex-col items-center justify-center min-h-[220px]">
-                <img id="qrisImageDisplay" src="" alt="Kode QRIS Toko" class="w-48 h-48 object-contain rounded-lg hidden">
-                <div id="qrisPlaceholder" class="text-center p-4">
-                    <span class="text-3xl block mb-2">📱</span>
-                    <p class="text-xs font-bold text-slate-600">Gambar QRIS Belum Diset</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Masukkan link gambar QRIS di form sebelah kanan.</p>
-                </div>
-            </div>
-
-            <div class="space-y-2 pt-1">
-                <button onclick="confirmQrisPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl shadow-md transition text-xs flex items-center justify-center gap-1">
-                    <span>✅</span> Konfirmasi Sudah Terbayar
-                </button>
-                <button onclick="closeQrisModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 rounded-xl text-xs transition">
-                    Kembali
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- LOGIKA JAVASCRIPT LENGKAP UTUH -->
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxpE7MseHNxo-UpJuNA_aZYAZv0jJXX6usliUfw9HolBVTJIhDnxomf4e-GIwOuqF5R/exec";
@@ -455,7 +423,6 @@
         let isGlobalBusy = false;
 
         let currentImageData = "";
-        let qrisImageUrl = localStorage.getItem('qris_store_url') || "";
 
         let products = {};
         let cart = {}; 
@@ -464,8 +431,8 @@
         let lastFailTime = 0;
         let failTimer = null;
 
-        // VARIABLE AI LOKAL (MOBILE NET + KNN)
-        let knnClassifier = null;
+        // VARIABLE AI LOKAL (MOBILE NET + KNN) - PERBAIKAN SHADOWING VARIABLE
+        let knnInstance = null;
         let mobilenetModel = null;
         let isKnnLoaded = false;
         let recordInterval = null;
@@ -474,7 +441,7 @@
         async function initLocalAI() {
             const statusBadge = document.getElementById('aiStatusBadge');
             try {
-                knnClassifier = knnClassifier.create();
+                knnInstance = knnClassifier.create();
                 mobilenetModel = await mobilenet.load();
                 isKnnLoaded = true;
 
@@ -493,10 +460,12 @@
             }
         }
 
-        // FUNGSI REKAM SAMPEL AI LOKAL KEMASAN
-        function startRecordingSample() {
-            const targetId = editingId || selectedLinkId;
-            if (!targetId || targetId === 'NEW' || targetId === 'LINK') {
+        // FUNGSI REKAM SAMPEL AI LOKAL KEMASAN (PENANGANAN TAHAN HP)
+        function startRecordingSample(e) {
+            if (e && e.cancelable) e.preventDefault();
+
+            const targetId = editingId || (selectedLinkId !== 'NEW' && selectedLinkId !== 'LINK' ? selectedLinkId : null);
+            if (!targetId) {
                 alert("Pilih atau buat barang terlebih dahulu di etalase sebelum merekam kemasan!");
                 return;
             }
@@ -507,20 +476,31 @@
                 return;
             }
 
+            if (!mobilenetModel || !knnInstance) {
+                alert("Sistem AI Lokal sedang memuat, tunggu 5 detik lagi...");
+                return;
+            }
+
             const recordBtn = document.getElementById('recordBtn');
             recordBtn.innerText = "🔴 Perekaman Aktif...";
             recordBtn.classList.replace('bg-purple-700', 'bg-rose-600');
 
+            if (recordInterval) clearInterval(recordInterval);
+
             recordInterval = setInterval(() => {
                 try {
                     const logits = mobilenetModel.infer(videoElement, true);
-                    knnClassifier.addExample(logits, targetId);
+                    knnInstance.addExample(logits, targetId);
                     updateSampleCounterDisplay();
-                } catch (e) {}
+                } catch (e) {
+                    console.error("Gagal rekam frame AI:", e);
+                }
             }, 150);
         }
 
-        function stopRecordingSample() {
+        function stopRecordingSample(e) {
+            if (e && e.cancelable) e.preventDefault();
+
             if (recordInterval) {
                 clearInterval(recordInterval);
                 recordInterval = null;
@@ -534,8 +514,8 @@
 
         function updateSampleCounterDisplay() {
             const counter = document.getElementById('sampleCounterBadge');
-            if (knnClassifier && counter) {
-                const totalSamples = knnClassifier.getNumClasses() > 0 ? knnClassifier.getClassExampleCount() : {};
+            if (knnInstance && counter) {
+                const totalSamples = knnInstance.getNumClasses() > 0 ? knnInstance.getClassExampleCount() : {};
                 let count = 0;
                 Object.values(totalSamples).forEach(c => count += c);
                 counter.innerText = `${count} Sampel AI`;
@@ -543,11 +523,11 @@
         }
 
         function saveKnnDatasetToLocalStorage() {
-            if (!knnClassifier || knnClassifier.getNumClasses() === 0) {
+            if (!knnInstance || knnInstance.getNumClasses() === 0) {
                 alert("Belum ada sampel kemasan yang direkam!");
                 return;
             }
-            const dataset = knnClassifier.getClassifierDataset();
+            const dataset = knnInstance.getClassifierDataset();
             let datasetObj = {};
             Object.keys(dataset).forEach((key) => {
                 let data = dataset[key].dataSync();
@@ -559,12 +539,12 @@
 
         function loadKnnDatasetFromLocalStorage() {
             const dataStr = localStorage.getItem("knn_store_dataset");
-            if (!dataStr || !knnClassifier) return;
+            if (!dataStr || !knnInstance) return;
             try {
                 const datasetObj = JSON.parse(dataStr);
                 Object.keys(datasetObj).forEach((key) => {
                     const tensor = tf.tensor2d(datasetObj[key], [datasetObj[key].length / 1024, 1024]);
-                    knnClassifier.setClassifierDataset({ [key]: tensor });
+                    knnInstance.setClassifierDataset({ [key]: tensor });
                 });
                 updateSampleCounterDisplay();
             } catch (e) { console.error("Gagal load hafalan AI:", e); }
@@ -573,7 +553,7 @@
         function clearKnnDataset() {
             if (confirm("Hapus semua memori hafalan kemasan AI lokal di HP?")) {
                 localStorage.removeItem("knn_store_dataset");
-                if (knnClassifier) knnClassifier.clearAllClasses();
+                if (knnInstance) knnInstance.clearAllClasses();
                 updateSampleCounterDisplay();
                 alert("Memori hafalan AI berhasil dibersihkan.");
             }
@@ -581,10 +561,10 @@
 
         // INSTANT CLASSIFY VIA LOKAL AI (< 100 MS)
         async function predictLocalAIInstant(videoElement) {
-            if (isLockingScan || !isKnnLoaded || !knnClassifier || knnClassifier.getNumClasses() === 0) return;
+            if (isLockingScan || !isKnnLoaded || !knnInstance || knnInstance.getNumClasses() === 0) return;
             try {
                 const logits = mobilenetModel.infer(videoElement, true);
-                const res = await knnClassifier.predictClass(logits);
+                const res = await knnInstance.predictClass(logits);
                 
                 if (res.confidences[res.label] > 0.82) {
                     const matchedId = res.label;
@@ -627,35 +607,6 @@
                 osc2.stop(now + 0.5);
             } catch (e) {}
         }
-
-        function saveQrisUrl(url) {
-            qrisImageUrl = url.trim();
-            localStorage.setItem('qris_store_url', qrisImageUrl);
-        }
-
-        function openQrisModal() {
-            const total = getGrandTotal();
-            if (total <= 0) {
-                alert("Keranjang masih kosong!");
-                return;
-            }
-            document.getElementById('qrisTotalAmount').innerText = formatRupiah(total);
-            const imgEl = document.getElementById('qrisImageDisplay');
-            const placeholderEl = document.getElementById('qrisPlaceholder');
-
-            if (qrisImageUrl) {
-                imgEl.src = qrisImageUrl;
-                imgEl.classList.remove('hidden');
-                placeholderEl.classList.add('hidden');
-            } else {
-                imgEl.classList.add('hidden');
-                placeholderEl.classList.remove('hidden');
-            }
-            document.getElementById('qrisModal').classList.remove('hidden');
-        }
-
-        function closeQrisModal() { document.getElementById('qrisModal').classList.add('hidden'); }
-        function confirmQrisPayment() { closeQrisModal(); completeTransaction(); }
 
         function completeTransaction() {
             const total = getGrandTotal();
@@ -894,11 +845,9 @@
             let height = videoElement.videoHeight || 300;
             
             if (width > height && width > maxDim) {
-                height *= maxDim / width;
-                width = maxDim;
+                height *= maxDim / width; width = maxDim;
             } else if (height > maxDim) {
-                width *= maxDim / height;
-                height = maxDim;
+                width *= maxDim / height; height = maxDim;
             }
 
             canvas.width = width;
@@ -1640,7 +1589,6 @@
         }
 
         // INIT EXECUTION
-        if (qrisImageUrl) document.getElementById('qrisUrlInput').value = qrisImageUrl;
         renderCart();
         loadProductsFromSheets();
         initLocalAI();
