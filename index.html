@@ -3,15 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Sembako Pintar - Ultra Fast Scan & AI</title>
+    <title>Kasir Sembako Pintar - Ultra Fast Scan, AI Live & On-Device AI</title>
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Library CDN -->
+    
+    <!-- Library CDN Utama -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- TensorFlow.js & On-Device AI Classifier (Scan Kemasan Instan) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier@1.2.4/dist/knn-classifier.min.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -39,21 +47,10 @@
             box-shadow: 0 0 12px #10b981;
             animation: scan-line 1.8s ease-in-out infinite alternate;
         }
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 8px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 8px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen p-3 sm:p-5 antialiased selection:bg-emerald-500 selection:text-white">
@@ -70,7 +67,7 @@
                     <h1 class="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Kasir Sembako Pintar</h1>
                     <p class="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Scan Kilat & Terhubung Google Sheets
+                        Scan Kilat, Gemini AI, & AI Kemasan Lokal
                     </p>
                 </div>
             </div>
@@ -98,7 +95,7 @@
                         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                             <span>⚡</span> Scanner Kilat, OCR & AI Live
                         </h2>
-                        <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Hardware Speed</span>
+                        <span id="aiStatusBadge" class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Memuat AI Lokal...</span>
                     </div>
 
                     <!-- CAMERA VIEWPORT -->
@@ -127,7 +124,7 @@
                         </div>
                     </div>
 
-                    <!-- Control Buttons -->
+                    <!-- Control Buttons Utama -->
                     <div class="flex items-center gap-2 mt-3">
                         <button onclick="startScanner()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1">
                             <span>⚡</span> Scan Kilat
@@ -141,6 +138,29 @@
                         <button onclick="stopScanner()" class="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white p-2.5 rounded-xl text-xs font-bold shadow-md shadow-rose-500/20 active:scale-[0.98] transition-all flex items-center justify-center shrink-0" title="Stop Scanner">
                             🛑
                         </button>
+                    </div>
+
+                    <!-- PANEL PELATIHAN AI LOKAL KEMASAN INSTAN -->
+                    <div class="mt-3 p-3 bg-purple-50/70 border border-purple-200/80 rounded-xl space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[11px] font-bold text-purple-950 flex items-center gap-1">
+                                🤖 Pelatihan AI Kemasan Lokal (Tanpa Internet)
+                            </span>
+                            <span id="sampleCounterBadge" class="text-[10px] bg-purple-200 text-purple-900 px-2 py-0.5 rounded-full font-bold">0 Sampel</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500">Pilih/edit barang di etalase, arahkan kamera ke bungkusnya, lalu tahan tombol rekam di bawah.</p>
+                        
+                        <div class="flex gap-1.5">
+                            <button id="recordBtn" onmousedown="startRecordingSample()" onmouseup="stopRecordingSample()" ontouchstart="startRecordingSample()" ontouchend="stopRecordingSample()" class="flex-1 bg-purple-700 hover:bg-purple-800 text-white py-2 px-2 rounded-lg text-xs font-bold transition shadow-xs flex items-center justify-center gap-1 select-none">
+                                📸 Tahan Utk Rekam Kemasan
+                            </button>
+                            <button onclick="saveKnnDatasetToLocalStorage()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-lg text-xs font-bold transition shadow-xs shrink-0" title="Simpan Hafalan AI">
+                                💾 Simpan
+                            </button>
+                            <button onclick="clearKnnDataset()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 py-2 px-2.5 rounded-lg text-xs font-bold transition shrink-0" title="Hapus Hafalan AI">
+                                🗑️
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Search Input Manual -->
@@ -185,14 +205,21 @@
                             </div>
                         </div>
 
-                        <!-- Quick Cash Buttons -->
+                        <!-- Quick Cash & QRIS Buttons -->
                         <div class="flex gap-1.5 overflow-x-auto pt-1">
+                            <button onclick="openQrisModal()" class="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-[11px] font-bold shadow-sm transition shrink-0 flex items-center gap-1">
+                                📱 Bayar QRIS
+                            </button>
                             <button onclick="setPaidAmount('exact')" class="px-2.5 py-1.5 bg-white border border-emerald-200 hover:border-emerald-400 text-emerald-800 rounded-lg text-[11px] font-bold shadow-xs hover:bg-emerald-100/50 transition shrink-0">Uang Pas</button>
                             <button onclick="setPaidAmount(10)" class="px-2.5 py-1.5 bg-white border border-emerald-200 hover:border-emerald-400 text-emerald-800 rounded-lg text-[11px] font-bold shadow-xs hover:bg-emerald-100/50 transition shrink-0">10rb</button>
                             <button onclick="setPaidAmount(20)" class="px-2.5 py-1.5 bg-white border border-emerald-200 hover:border-emerald-400 text-emerald-800 rounded-lg text-[11px] font-bold shadow-xs hover:bg-emerald-100/50 transition shrink-0">20rb</button>
                             <button onclick="setPaidAmount(50)" class="px-2.5 py-1.5 bg-white border border-emerald-200 hover:border-emerald-400 text-emerald-800 rounded-lg text-[11px] font-bold shadow-xs hover:bg-emerald-100/50 transition shrink-0">50rb</button>
                             <button onclick="setPaidAmount(100)" class="px-2.5 py-1.5 bg-white border border-emerald-200 hover:border-emerald-400 text-emerald-800 rounded-lg text-[11px] font-bold shadow-xs hover:bg-emerald-100/50 transition shrink-0">100rb</button>
                         </div>
+
+                        <button onclick="completeTransaction()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2.5 rounded-xl shadow-md transition text-xs flex items-center justify-center gap-1.5">
+                            <span>✅</span> Selesaikan Transaksi / Konfirmasi Lunas
+                        </button>
                     </div>
                 </div>
 
@@ -275,6 +302,12 @@
                                 </div>
                                 <button type="button" onclick="clearImageChoice()" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg font-bold text-xs">✕ Hapus Foto</button>
                             </div>
+                        </div>
+
+                        <!-- SETTING LINK FOTO QRIS TOKO -->
+                        <div class="space-y-1.5 border-t border-slate-100 pt-2">
+                            <label class="block text-[11px] font-bold text-blue-900">📱 Link Foto Kode QRIS Toko Kamu (SeaBank):</label>
+                            <input type="url" id="qrisUrlInput" onchange="saveQrisUrl(this.value)" placeholder="https://domain.com/qris-toko.jpg" class="w-full p-2 border border-blue-200 rounded-xl font-mono text-[11px] bg-blue-50/50 text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20">
                         </div>
 
                         <div class="pt-1">
@@ -375,22 +408,54 @@
 
     </div>
 
-    <!-- LOGIKA JAVASCRIPT LENGKAP -->
+    <!-- MODAL DISPLAY KODE QRIS -->
+    <div id="qrisModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 transition-all">
+        <div class="bg-white rounded-3xl p-5 max-w-xs w-full text-center space-y-4 shadow-2xl border border-slate-100">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                <span class="font-bold text-slate-800 text-sm flex items-center gap-1.5">📱 Pembayaran QRIS</span>
+                <button onclick="closeQrisModal()" class="text-slate-400 hover:text-slate-600 font-bold text-base">✕</button>
+            </div>
+
+            <div class="bg-indigo-50/70 border border-indigo-100 p-3 rounded-2xl">
+                <p class="text-[11px] text-slate-500 font-medium">Total Tagihan Pembeli:</p>
+                <p id="qrisTotalAmount" class="text-xl font-extrabold text-indigo-700">Rp 0</p>
+            </div>
+
+            <div class="p-3 bg-white border border-slate-200 rounded-2xl shadow-inner flex flex-col items-center justify-center min-h-[220px]">
+                <img id="qrisImageDisplay" src="" alt="Kode QRIS Toko" class="w-48 h-48 object-contain rounded-lg hidden">
+                <div id="qrisPlaceholder" class="text-center p-4">
+                    <span class="text-3xl block mb-2">📱</span>
+                    <p class="text-xs font-bold text-slate-600">Gambar QRIS Belum Diset</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Masukkan link gambar QRIS di form sebelah kanan.</p>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <button onclick="confirmQrisPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 rounded-xl shadow-md transition text-xs flex items-center justify-center gap-1">
+                    <span>✅</span> Konfirmasi Sudah Terbayar
+                </button>
+                <button onclick="closeQrisModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 rounded-xl text-xs transition">
+                    Kembali
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIKA JAVASCRIPT LENGKAP UTUH -->
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxpE7MseHNxo-UpJuNA_aZYAZv0jJXX6usliUfw9HolBVTJIhDnxomf4e-GIwOuqF5R/exec";
 
         let html5QrCode = null;
         let nativeStream = null;
         let nativeAnimFrame = null;
-        let ocrWorker = null;
         let ocrInterval = null;
-        let isProcessingOcr = false;
         let isLockingScan = false;
         let editingId = null;
         let selectedLinkId = 'NEW';
         let isGlobalBusy = false;
 
         let currentImageData = "";
+        let qrisImageUrl = localStorage.getItem('qris_store_url') || "";
 
         let products = {};
         let cart = {}; 
@@ -398,6 +463,208 @@
         let lastScanTime = 0;
         let lastFailTime = 0;
         let failTimer = null;
+
+        // VARIABLE AI LOKAL (MOBILE NET + KNN)
+        let knnClassifier = null;
+        let mobilenetModel = null;
+        let isKnnLoaded = false;
+        let recordInterval = null;
+
+        // INSIALISASI AI LOKAL PERTAMA KALI
+        async function initLocalAI() {
+            const statusBadge = document.getElementById('aiStatusBadge');
+            try {
+                knnClassifier = knnClassifier.create();
+                mobilenetModel = await mobilenet.load();
+                isKnnLoaded = true;
+
+                loadKnnDatasetFromLocalStorage();
+
+                if (statusBadge) {
+                    statusBadge.innerText = "⚡ On-Device AI Aktif";
+                    statusBadge.className = "text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold";
+                }
+            } catch (err) {
+                console.error("Gagal load AI Lokal:", err);
+                if (statusBadge) {
+                    statusBadge.innerText = "⚠️ Hardware Speed";
+                    statusBadge.className = "text-[10px] bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full font-bold";
+                }
+            }
+        }
+
+        // FUNGSI REKAM SAMPEL AI LOKAL KEMASAN
+        function startRecordingSample() {
+            const targetId = editingId || selectedLinkId;
+            if (!targetId || targetId === 'NEW' || targetId === 'LINK') {
+                alert("Pilih atau buat barang terlebih dahulu di etalase sebelum merekam kemasan!");
+                return;
+            }
+
+            const videoElement = document.querySelector("#reader video");
+            if (!videoElement || videoElement.readyState !== 4) {
+                alert("Nyalakan kamera (Scan Kilat) terlebih dahulu!");
+                return;
+            }
+
+            const recordBtn = document.getElementById('recordBtn');
+            recordBtn.innerText = "🔴 Perekaman Aktif...";
+            recordBtn.classList.replace('bg-purple-700', 'bg-rose-600');
+
+            recordInterval = setInterval(() => {
+                try {
+                    const logits = mobilenetModel.infer(videoElement, true);
+                    knnClassifier.addExample(logits, targetId);
+                    updateSampleCounterDisplay();
+                } catch (e) {}
+            }, 150);
+        }
+
+        function stopRecordingSample() {
+            if (recordInterval) {
+                clearInterval(recordInterval);
+                recordInterval = null;
+            }
+            const recordBtn = document.getElementById('recordBtn');
+            if (recordBtn) {
+                recordBtn.innerText = "📸 Tahan Utk Rekam Kemasan";
+                recordBtn.classList.replace('bg-rose-600', 'bg-purple-700');
+            }
+        }
+
+        function updateSampleCounterDisplay() {
+            const counter = document.getElementById('sampleCounterBadge');
+            if (knnClassifier && counter) {
+                const totalSamples = knnClassifier.getNumClasses() > 0 ? knnClassifier.getClassExampleCount() : {};
+                let count = 0;
+                Object.values(totalSamples).forEach(c => count += c);
+                counter.innerText = `${count} Sampel AI`;
+            }
+        }
+
+        function saveKnnDatasetToLocalStorage() {
+            if (!knnClassifier || knnClassifier.getNumClasses() === 0) {
+                alert("Belum ada sampel kemasan yang direkam!");
+                return;
+            }
+            const dataset = knnClassifier.getClassifierDataset();
+            let datasetObj = {};
+            Object.keys(dataset).forEach((key) => {
+                let data = dataset[key].dataSync();
+                datasetObj[key] = Array.from(data);
+            });
+            localStorage.setItem("knn_store_dataset", JSON.stringify(datasetObj));
+            alert("✅ Hafalan kemasan produk berhasil disimpan di memori HP!");
+        }
+
+        function loadKnnDatasetFromLocalStorage() {
+            const dataStr = localStorage.getItem("knn_store_dataset");
+            if (!dataStr || !knnClassifier) return;
+            try {
+                const datasetObj = JSON.parse(dataStr);
+                Object.keys(datasetObj).forEach((key) => {
+                    const tensor = tf.tensor2d(datasetObj[key], [datasetObj[key].length / 1024, 1024]);
+                    knnClassifier.setClassifierDataset({ [key]: tensor });
+                });
+                updateSampleCounterDisplay();
+            } catch (e) { console.error("Gagal load hafalan AI:", e); }
+        }
+
+        function clearKnnDataset() {
+            if (confirm("Hapus semua memori hafalan kemasan AI lokal di HP?")) {
+                localStorage.removeItem("knn_store_dataset");
+                if (knnClassifier) knnClassifier.clearAllClasses();
+                updateSampleCounterDisplay();
+                alert("Memori hafalan AI berhasil dibersihkan.");
+            }
+        }
+
+        // INSTANT CLASSIFY VIA LOKAL AI (< 100 MS)
+        async function predictLocalAIInstant(videoElement) {
+            if (isLockingScan || !isKnnLoaded || !knnClassifier || knnClassifier.getNumClasses() === 0) return;
+            try {
+                const logits = mobilenetModel.infer(videoElement, true);
+                const res = await knnClassifier.predictClass(logits);
+                
+                if (res.confidences[res.label] > 0.82) {
+                    const matchedId = res.label;
+                    if (products[matchedId]) {
+                        isLockingScan = true;
+                        showScanFeedback(true, `⚡ Instant AI: ${products[matchedId].name}`);
+                        triggerVibration();
+                        addToCart(matchedId);
+                        setTimeout(() => { isLockingScan = false; }, 2000);
+                    }
+                }
+            } catch (e) {}
+        }
+
+        // EFEK SUARA PEMBAYARAN BERHASIL
+        function playSuccessSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = audioCtx.currentTime;
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(523.25, now);
+                gain1.gain.setValueAtTime(0.3, now);
+                gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.3);
+
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(659.25, now + 0.12);
+                gain2.gain.setValueAtTime(0.3, now + 0.12);
+                gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start(now + 0.12);
+                osc2.stop(now + 0.5);
+            } catch (e) {}
+        }
+
+        function saveQrisUrl(url) {
+            qrisImageUrl = url.trim();
+            localStorage.setItem('qris_store_url', qrisImageUrl);
+        }
+
+        function openQrisModal() {
+            const total = getGrandTotal();
+            if (total <= 0) {
+                alert("Keranjang masih kosong!");
+                return;
+            }
+            document.getElementById('qrisTotalAmount').innerText = formatRupiah(total);
+            const imgEl = document.getElementById('qrisImageDisplay');
+            const placeholderEl = document.getElementById('qrisPlaceholder');
+
+            if (qrisImageUrl) {
+                imgEl.src = qrisImageUrl;
+                imgEl.classList.remove('hidden');
+                placeholderEl.classList.add('hidden');
+            } else {
+                imgEl.classList.add('hidden');
+                placeholderEl.classList.remove('hidden');
+            }
+            document.getElementById('qrisModal').classList.remove('hidden');
+        }
+
+        function closeQrisModal() { document.getElementById('qrisModal').classList.add('hidden'); }
+        function confirmQrisPayment() { closeQrisModal(); completeTransaction(); }
+
+        function completeTransaction() {
+            const total = getGrandTotal();
+            if (total <= 0) { alert("Keranjang belanjaan masih kosong!"); return; }
+            playSuccessSound();
+            triggerVibration();
+            alert(`✅ Transaksi ${formatRupiah(total)} Berhasil Dikonfirmasi Lunas!`);
+            clearCart();
+        }
 
         // LOGIKA SWITCH TAB HALAMAN
         function switchTab(tabName) {
@@ -419,9 +686,7 @@
             }
         }
 
-        // --- PEMROSESAN ANGKA KHUSUS KALKULATOR ---
-        
-        // Khusus Total Harga Kulakan (67 -> 67.000)
+        // PEMROSESAN ANGKA KHUSUS KALKULATOR
         function parseTotalCost(val) {
             if (!val) return 0;
             let str = val.toString().replace(/\./g, '').replace(',', '.').trim();
@@ -430,7 +695,6 @@
             return (num > 0 && num < 1000) ? num * 1000 : Math.round(num);
         }
 
-        // Khusus Target Untung & Tes Harga (2.5 -> 2500, 500 -> 500)
         function parseUnitCost(val) {
             if (!val) return 0;
             let str = val.toString().trim();
@@ -438,7 +702,6 @@
             return parseFloat(str.replace(',', '.'));
         }
 
-        // Pemrosesan Angka Umum Kasir
         function processAmount(val) {
             if (!val) return 0;
             let str = val.toString().replace(/\./g, '').replace(',', '.').trim();
@@ -448,7 +711,7 @@
             return Math.round(num);
         }
 
-        // LOGIKA KALKULATOR CERDAS (AUTO REKOMENDASI UNTUNG PAS + BUNDLING PERMEN)
+        // LOGIKA KALKULATOR CERDAS
         function calculateProfit(mode = 'nominal') {
             const totalCost = parseTotalCost(document.getElementById('calcTotalCost').value);
             const itemQty = parseFloat(document.getElementById('calcItemQty').value) || 0;
@@ -472,55 +735,31 @@
 
             if (mode === 'nominal') {
                 profitPerItem = parseUnitCost(nominalInput.value);
-                if (profitPerItem > 0) {
-                    marginInput.value = ((profitPerItem / modalPerItem) * 100).toFixed(1);
-                } else {
-                    isAutoRecommend = true;
-                }
+                if (profitPerItem > 0) marginInput.value = ((profitPerItem / modalPerItem) * 100).toFixed(1);
+                else isAutoRecommend = true;
             } else if (mode === 'percent') {
                 let percent = parseFloat(marginInput.value.replace(',', '.')) || 0;
-                if (percent > 0) {
-                    profitPerItem = modalPerItem * (percent / 100);
-                    nominalInput.value = Math.round(profitPerItem);
-                } else {
-                    isAutoRecommend = true;
-                }
+                if (percent > 0) { profitPerItem = modalPerItem * (percent / 100); nominalInput.value = Math.round(profitPerItem); }
+                else isAutoRecommend = true;
             } else if (mode === 'custom') {
                 const customPrice = parseUnitCost(document.getElementById('calcCustomPrice').value);
-                if (customPrice > 0) {
-                    profitPerItem = customPrice - modalPerItem;
-                    nominalInput.value = Math.round(profitPerItem);
-                    marginInput.value = ((profitPerItem / modalPerItem) * 100).toFixed(1);
-                } else {
-                    isAutoRecommend = true;
-                }
+                if (customPrice > 0) { profitPerItem = customPrice - modalPerItem; nominalInput.value = Math.round(profitPerItem); marginInput.value = ((profitPerItem / modalPerItem) * 100).toFixed(1); }
+                else isAutoRecommend = true;
             } else {
                 profitPerItem = parseUnitCost(nominalInput.value);
-                if (profitPerItem <= 0 && (!marginInput.value || parseFloat(marginInput.value) === 0)) {
-                    isAutoRecommend = true;
-                }
+                if (profitPerItem <= 0 && (!marginInput.value || parseFloat(marginInput.value) === 0)) isAutoRecommend = true;
             }
 
-            let recSellingPrice = 0;
-            let recProfitPerItem = 0;
-            let isBundle = false;
-            let bundleQty = 1;
+            let recSellingPrice = 0, recProfitPerItem = 0, isBundle = false, bundleQty = 1;
 
             if (isAutoRecommend) {
                 if (modalPerItem < 350) {
                     const maxModalFor500 = 500 / 1.25; 
                     bundleQty = Math.floor(maxModalFor500 / modalPerItem);
-                    
                     if (bundleQty >= 2) {
-                        isBundle = true;
-                        recSellingPrice = 500;
-                        const modalBundle = modalPerItem * bundleQty;
-                        const profitBundle = 500 - modalBundle;
-                        recProfitPerItem = profitBundle / bundleQty;
-                    } else {
-                        recSellingPrice = 500;
-                        recProfitPerItem = recSellingPrice - modalPerItem;
-                    }
+                        isBundle = true; recSellingPrice = 500;
+                        recProfitPerItem = (500 - (modalPerItem * bundleQty)) / bundleQty;
+                    } else { recSellingPrice = 500; recProfitPerItem = recSellingPrice - modalPerItem; }
                 } else {
                     const minProfit = Math.max(150, modalPerItem * 0.10); 
                     recSellingPrice = Math.ceil((modalPerItem + minProfit) / 500) * 500;
@@ -534,7 +773,6 @@
             }
 
             const recTotalProfit = recProfitPerItem * itemQty;
-
             document.getElementById('resModalPerItem').innerText = formatRupiah(modalPerItem);
             document.getElementById('resTotalProfit').innerText = formatRupiah(recTotalProfit);
 
@@ -546,14 +784,12 @@
                 document.getElementById('resRecProfitDetail').innerText = `+${formatRupiah(recProfitPerItem)}/pcs`;
             }
 
-            // ANALISIS TES HARGA JUAL MANUAL
             const customResultElem = document.getElementById('resCustomResult');
             const customVal = parseUnitCost(document.getElementById('calcCustomPrice').value);
 
             if (customVal > 0) {
                 const diffPerItem = customVal - modalPerItem;
                 const diffTotal = diffPerItem * itemQty;
-
                 if (diffPerItem >= 0) {
                     customResultElem.className = "font-extrabold text-emerald-600 text-xs";
                     customResultElem.innerText = `+${formatRupiah(diffPerItem)}/pcs (Untung ${formatRupiah(diffTotal)}/dus)`;
@@ -567,13 +803,12 @@
             }
         }
 
-        // --- SCANNER KILAT NATIVE HARDWARE SPEED ---
+        // SCANNER KILAT NATIVE HARDWARE SPEED
         async function startScanner() {
             stopScanner();
             const liveText = document.getElementById('liveTextDisplay');
             if (liveText) liveText.innerText = "⚡ Menyalakan Kamera Super Cepat...";
 
-            // OPSI 1: Native BarcodeDetector API (Kecepatan sub-detik / <100ms)
             if ('BarcodeDetector' in window) {
                 try {
                     const barcodeDetector = new BarcodeDetector({
@@ -581,12 +816,7 @@
                     });
 
                     nativeStream = await navigator.mediaDevices.getUserMedia({
-                        video: { 
-                            facingMode: "environment",
-                            frameRate: { ideal: 30, max: 60 },
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
-                        }
+                        video: { facingMode: "environment", frameRate: { ideal: 30, max: 60 }, width: { ideal: 1280 }, height: { ideal: 720 } }
                     });
 
                     const video = document.createElement('video');
@@ -600,7 +830,7 @@
                     readerDiv.appendChild(video);
                     video.className = "w-full h-[190px] object-cover rounded-xl";
 
-                    if (liveText) liveText.innerText = "⚡ Scan Kilat Aktif (Hardware Speed)";
+                    if (liveText) liveText.innerText = "⚡ Scan Kilat Barcode & On-Device AI Aktif";
 
                     async function renderFrame() {
                         if (!nativeStream || !nativeStream.active) return;
@@ -608,69 +838,43 @@
                             const barcodes = await barcodeDetector.detect(video);
                             if (barcodes.length > 0) {
                                 handleDetectedKey(barcodes[0].rawValue);
+                            } else {
+                                predictLocalAIInstant(video);
                             }
                         } catch (e) {}
                         nativeAnimFrame = requestAnimationFrame(renderFrame);
                     }
                     renderFrame();
                     return;
-                } catch (err) {
-                    console.log("Native Barcode Detector beralih ke Html5Qrcode...", err);
-                }
+                } catch (err) {}
             }
 
-            // OPSI 2: Fallback Html5Qrcode Dipacu 30 FPS
             html5QrCode = new Html5Qrcode("reader");
             html5QrCode.start(
                 { facingMode: "environment" }, 
-                { 
-                    fps: 30, 
-                    qrbox: { width: 250, height: 150 },
-                    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-                },
+                { fps: 30, qrbox: { width: 250, height: 150 }, experimentalFeatures: { useBarCodeDetectorIfSupported: true } },
                 (barcode) => handleDetectedKey(barcode),
                 () => {}
             ).then(() => {
                 if (liveText) liveText.innerText = "📷 Kamera Aktif (Mode Standard 30 FPS)";
-            }).catch(err => {
-                if (liveText) liveText.innerText = "❌ Gagal membuka kamera.";
             });
         }
 
         function stopScanner() {
-            if (ocrInterval) {
-                clearInterval(ocrInterval);
-                ocrInterval = null;
-            }
-            if (nativeAnimFrame) {
-                cancelAnimationFrame(nativeAnimFrame);
-                nativeAnimFrame = null;
-            }
-            if (nativeStream) {
-                nativeStream.getTracks().forEach(track => track.stop());
-                nativeStream = null;
-            }
+            stopRecordingSample();
+            if (ocrInterval) { clearInterval(ocrInterval); ocrInterval = null; }
+            if (nativeAnimFrame) { cancelAnimationFrame(nativeAnimFrame); nativeAnimFrame = null; }
+            if (nativeStream) { nativeStream.getTracks().forEach(track => track.stop()); nativeStream = null; }
             if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => {
-                    document.getElementById("reader").innerHTML = "";
-                }).catch(e => console.error(e));
-            } else {
-                document.getElementById("reader").innerHTML = "";
-            }
+                html5QrCode.stop().then(() => { document.getElementById("reader").innerHTML = ""; }).catch(e => {});
+            } else { document.getElementById("reader").innerHTML = ""; }
             
             const liveText = document.getElementById('liveTextDisplay');
             if (liveText) liveText.innerText = "Kamera mati.";
             document.getElementById('failIndicator').classList.add('hidden');
         }
 
-        function openCamera() {
-            setImageTab('CAMERA');
-            const camInput = document.getElementById('cameraInput');
-            camInput.value = "";
-            camInput.click();
-        }
-
-        // AKSI SCAN AI LANGSUNG DARI STREAM VIDEO LIVE
+        // AKSI SCAN AI GEMINI LIVE STREAM
         async function triggerAIScan() {
             const videoElement = document.querySelector("#reader video");
             const liveText = document.getElementById('liveTextDisplay');
@@ -678,10 +882,7 @@
             if (!videoElement || videoElement.readyState !== 4) {
                 if (liveText) liveText.innerText = "📷 Menyalakan kamera live...";
                 await startScanner();
-                
-                setTimeout(() => {
-                    triggerAIScan();
-                }, 1200);
+                setTimeout(() => { triggerAIScan(); }, 1200);
                 return;
             }
 
@@ -709,11 +910,47 @@
             await processImageWithAI(base64Data);
         }
 
+        async function processImageWithAI(base64Image) {
+            const liveText = document.getElementById('liveTextDisplay');
+
+            const catalog = {};
+            for (let id in products) { catalog[id] = products[id].name; }
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'analyze_ai', image: base64Image, catalog: catalog })
+                });
+                
+                const resData = await response.json();
+                
+                if (resData.status === "success" && resData.matchedId && products[resData.matchedId]) {
+                    const matchedItem = products[resData.matchedId];
+                    addToCart(resData.matchedId);
+                    showScanFeedback(true, `✨ AI: ${matchedItem.name}`);
+                    triggerVibration();
+                    if (liveText) liveText.innerText = `🤖 AI Menemukan: ${matchedItem.name}`;
+                } else {
+                    showScanFeedback(false, "AI Tidak Mengenali Produk");
+                    if (liveText) liveText.innerText = "❌ Gemini AI tidak menemukan barang yang cocok.";
+                }
+            } catch (err) {
+                showScanFeedback(false, "Gagal Koneksi AI");
+                if (liveText) liveText.innerText = "⚠️ Gagal terhubung ke AI.";
+            }
+        }
+
+        // AKSI FOTO KAMERA / GALERI / LINK URL
+        function openCamera() {
+            setImageTab('CAMERA');
+            const camInput = document.getElementById('cameraInput');
+            camInput.value = ""; camInput.click();
+        }
+
         function openGallery() {
             setImageTab('UPLOAD');
             const galInput = document.getElementById('galleryInput');
-            galInput.value = "";
-            galInput.click();
+            galInput.value = ""; galInput.click();
         }
 
         function setImageTab(tab) {
@@ -729,11 +966,8 @@
             uploadBtn.className = (tab === 'UPLOAD') ? activeClass : inactiveClass;
             urlBtn.className = (tab === 'URL') ? activeClass : inactiveClass;
 
-            if (tab === 'URL') {
-                urlContainer.classList.remove('hidden');
-            } else {
-                urlContainer.classList.add('hidden');
-            }
+            if (tab === 'URL') urlContainer.classList.remove('hidden');
+            else urlContainer.classList.add('hidden');
         }
 
         async function handleFileSelect(event) {
@@ -752,11 +986,9 @@
                     let height = img.height;
                     
                     if (width > height && width > maxDim) {
-                        height *= maxDim / width;
-                        width = maxDim;
+                        height *= maxDim / width; width = maxDim;
                     } else if (height > maxDim) {
-                        width *= maxDim / height;
-                        height = maxDim;
+                        width *= maxDim / height; height = maxDim;
                     }
 
                     canvas.width = width;
@@ -771,60 +1003,19 @@
             reader.readAsDataURL(file);
         }
 
-        async function processImageWithAI(base64Image) {
-            const liveText = document.getElementById('liveTextDisplay');
-
-            const catalog = {};
-            for (let id in products) {
-                catalog[id] = products[id].name;
-            }
-
-            try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'analyze_ai',
-                        image: base64Image,
-                        catalog: catalog
-                    })
-                });
-                
-                const resData = await response.json();
-                
-                if (resData.status === "success" && resData.matchedId && products[resData.matchedId]) {
-                    const matchedItem = products[resData.matchedId];
-                    addToCart(resData.matchedId);
-                    showScanFeedback(true, `✨ AI: ${matchedItem.name}`);
-                    triggerVibration();
-                    if (liveText) liveText.innerText = `🤖 AI Menemukan: ${matchedItem.name}`;
-                } else {
-                    showScanFeedback(false, "AI Tidak Mengenali Produk");
-                    if (liveText) liveText.innerText = "❌ Gemini AI tidak menemukan barang yang cocok.";
-                }
-            } catch (err) {
-                console.error("AI Error:", err);
-                showScanFeedback(false, "Gagal Koneksi AI");
-                if (liveText) liveText.innerText = "⚠️ Gagal terhubung ke AI.";
-            }
-        }
-
         function handleUrlInput(event) {
             const url = event.target.value.trim();
             if (url) {
                 currentImageData = url;
                 updatePreview(url, `Link URL`);
-            } else {
-                clearImageChoice();
-            }
+            } else clearImageChoice();
         }
 
         function updatePreview(src, infoText) {
             const container = document.getElementById('previewContainer');
             const img = document.getElementById('previewImage');
             const text = document.getElementById('previewSourceText');
-
-            img.src = src;
-            text.innerText = infoText;
+            img.src = src; text.innerText = infoText;
             container.classList.remove('hidden');
         }
 
@@ -846,11 +1037,9 @@
                 const response = await fetch(SCRIPT_URL);
                 const data = await response.json();
                 products = data || {};
-                
                 renderEtalase();
                 if (liveText) liveText.innerText = "✅ Etalase Google Sheets siap!";
             } catch (err) {
-                console.error("Gagal mengambil data:", err);
                 if (liveText) liveText.innerText = "❌ Gagal terhubung ke Google Sheets.";
             } finally {
                 if (refreshBtn) refreshBtn.disabled = false;
@@ -861,47 +1050,29 @@
             const liveText = document.getElementById('liveTextDisplay');
             if (liveText) liveText.innerText = "⏳ Menyimpan ke Google Sheets...";
 
-            const payload = { id, name, price, barcodes, image };
-
             try {
-                const res = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
+                const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ id, name, price, barcodes, image }) });
                 const result = await res.json();
-                
                 if (result.status === "error") {
                     alert("Gagal simpan: " + result.message);
-                    if (liveText) liveText.innerText = "❌ Gagal menyimpan.";
                 } else {
                     if (liveText) liveText.innerText = "✅ Tersimpan di Google Sheets!";
                     await loadProductsFromSheets();
                 }
-            } catch (err) {
-                console.error("Gagal menyimpan:", err);
-                alert("Gagal terhubung ke Google Sheets.");
-            }
+            } catch (err) { alert("Gagal terhubung ke Google Sheets."); }
         }
 
         async function deleteFromGoogleSheets(id) {
             const liveText = document.getElementById('liveTextDisplay');
             if (liveText) liveText.innerText = "⏳ Menghapus dari Google Sheets...";
 
-            const payload = { id, action: 'delete' };
-
             try {
-                await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
+                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ id, action: 'delete' }) });
                 if (liveText) liveText.innerText = "✅ Barang berhasil dihapus!";
                 delete products[id];
                 renderEtalase();
                 await loadProductsFromSheets();
-            } catch (err) {
-                console.error("Gagal menghapus:", err);
-                alert("Gagal menghapus dari Google Sheets.");
-            }
+            } catch (err) { alert("Gagal menghapus dari Google Sheets."); }
         }
 
         async function deleteProduct(id, btnElement) {
@@ -911,13 +1082,18 @@
 
             if (confirm(`Apakah Anda yakin ingin menghapus "${item.name}" dari etalase?`)) {
                 isGlobalBusy = true;
-                if (btnElement) {
-                    btnElement.disabled = true;
-                    btnElement.innerText = "⏳ Menghapus...";
-                    btnElement.classList.add('opacity-50');
-                }
-                
+                if (btnElement) { btnElement.disabled = true; btnElement.innerText = "⏳ Menghapus..."; }
                 await deleteFromGoogleSheets(id);
+                isGlobalBusy = false;
+            }
+        }
+
+        async function removeBarcodeFromProduct(id, barcode) {
+            if (isGlobalBusy) return;
+            if (confirm(`Hapus barcode "${barcode}" dari "${products[id].name}"?`)) {
+                isGlobalBusy = true;
+                products[id].barcodes = products[id].barcodes.filter(b => b !== barcode);
+                await saveToGoogleSheets(id, products[id].name, products[id].price, products[id].barcodes, products[id].image || "");
                 isGlobalBusy = false;
             }
         }
@@ -926,9 +1102,7 @@
             if (!barcode) return null;
             const clean = barcode.trim().toUpperCase();
             for (let id in products) {
-                if (products[id].barcodes && products[id].barcodes.includes(clean)) {
-                    return id;
-                }
+                if (products[id].barcodes && products[id].barcodes.includes(clean)) return id;
             }
             return null;
         }
@@ -940,20 +1114,11 @@
         function cleanAndFixText(text) {
             if (!text) return "";
             return text.toUpperCase()
-                .replace(/[\r\n]+/g, ' ')
-                .replace(/0/g, 'O')
-                .replace(/1/g, 'I')
-                .replace(/5/g, 'S')
-                .replace(/3/g, 'E')
-                .replace(/8/g, 'B')
-                .replace(/[^A-Z0-9\s]/g, '')
-                .replace(/\s+/g, ' ')
-                .trim();
+                .replace(/[\r\n]+/g, ' ').replace(/0/g, 'O').replace(/1/g, 'I').replace(/5/g, 'S').replace(/3/g, 'E').replace(/8/g, 'B')
+                .replace(/[^A-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
         }
 
-        function triggerVibration() {
-            if ("vibrate" in navigator) navigator.vibrate(200);
-        }
+        function triggerVibration() { if ("vibrate" in navigator) navigator.vibrate(200); }
 
         function getProductImageHtml(imageSrc, name, sizeClass = "w-10 h-10") {
             if (imageSrc && imageSrc.trim() !== "") {
@@ -977,14 +1142,10 @@
                 searchPanel.classList.add('hidden');
                 
                 if (!editingId) {
-                    nameInput.value = '';
-                    priceInput.value = '';
-                    clearImageChoice();
+                    nameInput.value = ''; priceInput.value = ''; clearImageChoice();
                 }
-                nameInput.disabled = false;
-                priceInput.disabled = false;
-                nameInput.classList.remove('bg-slate-100');
-                priceInput.classList.remove('bg-slate-100');
+                nameInput.disabled = false; priceInput.disabled = false;
+                nameInput.classList.remove('bg-slate-100'); priceInput.classList.remove('bg-slate-100');
                 saveBtn.innerText = editingId ? "💾 Simpan Perubahan" : "💾 Simpan Barang Baru";
             } else {
                 newBtn.className = "flex-1 py-2 px-3 rounded-lg font-bold transition-all text-center text-slate-600 hover:text-slate-900";
@@ -1006,8 +1167,8 @@
             const query = cleanAndFixText(rawQuery);
             const resultsDiv = document.getElementById('linkSearchResults');
             resultsDiv.innerHTML = '';
-
             let count = 0;
+
             for (let id in products) {
                 const item = products[id];
                 const fullText = cleanAndFixText(item.name + " " + (item.barcodes || []).join(" "));
@@ -1050,19 +1211,15 @@
 
             const nameInput = document.getElementById('nameInput');
             const priceInput = document.getElementById('priceInput');
-            nameInput.value = item.name;
-            priceInput.value = item.price;
+            nameInput.value = item.name; priceInput.value = item.price;
             
             if (item.image) {
                 currentImageData = item.image;
                 updatePreview(item.image, "Tersimpan");
             }
 
-            nameInput.disabled = true;
-            priceInput.disabled = true;
-            nameInput.classList.add('bg-slate-100');
-            priceInput.classList.add('bg-slate-100');
-
+            nameInput.disabled = true; priceInput.disabled = true;
+            nameInput.classList.add('bg-slate-100'); priceInput.classList.add('bg-slate-100');
             document.getElementById('saveBtn').innerText = `🔗 Tautkan Barcode ke "${item.name}"`;
         }
 
@@ -1076,20 +1233,15 @@
 
             const nameInput = document.getElementById('nameInput');
             const priceInput = document.getElementById('priceInput');
-            nameInput.value = '';
-            priceInput.value = '';
+            nameInput.value = ''; priceInput.value = '';
             clearImageChoice();
 
-            nameInput.disabled = false;
-            priceInput.disabled = false;
-            nameInput.classList.remove('bg-slate-100');
-            priceInput.classList.remove('bg-slate-100');
+            nameInput.disabled = false; priceInput.disabled = false;
+            nameInput.classList.remove('bg-slate-100'); priceInput.classList.remove('bg-slate-100');
             document.getElementById('saveBtn').innerText = "💾 Pilih Barang di Atas";
         }
 
-        function getGrandTotal() {
-            return Object.keys(cart).reduce((sum, id) => sum + (cart[id].price * cart[id].qty), 0);
-        }
+        function getGrandTotal() { return Object.keys(cart).reduce((sum, id) => sum + (cart[id].price * cart[id].qty), 0); }
 
         function calculateChange() {
             const total = getGrandTotal();
@@ -1115,11 +1267,8 @@
 
         function setPaidAmount(val) {
             const total = getGrandTotal();
-            if (val === 'exact') {
-                document.getElementById('paidInput').value = total;
-            } else {
-                document.getElementById('paidInput').value = val * 1000;
-            }
+            if (val === 'exact') document.getElementById('paidInput').value = total;
+            else document.getElementById('paidInput').value = val * 1000;
             calculateChange();
         }
 
@@ -1127,24 +1276,15 @@
             if (isSuccess) {
                 const overlay = document.getElementById('successOverlay');
                 document.getElementById('successText').innerText = text;
-
                 overlay.classList.remove('hidden');
                 setTimeout(() => overlay.classList.remove('opacity-0', 'scale-90'), 10);
-
-                setTimeout(() => {
-                    overlay.classList.add('opacity-0', 'scale-90');
-                    setTimeout(() => overlay.classList.add('hidden'), 200);
-                }, 800);
-
+                setTimeout(() => { overlay.classList.add('opacity-0', 'scale-90'); setTimeout(() => overlay.classList.add('hidden'), 200); }, 800);
                 document.getElementById('failIndicator').classList.add('hidden');
             } else {
                 const failIndicator = document.getElementById('failIndicator');
                 failIndicator.classList.remove('hidden');
-
                 if (failTimer) clearTimeout(failTimer);
-                failTimer = setTimeout(() => {
-                    failIndicator.classList.add('hidden');
-                }, 1800);
+                failTimer = setTimeout(() => { failIndicator.classList.add('hidden'); }, 1800);
             }
         }
 
@@ -1153,11 +1293,7 @@
             const query = cleanAndFixText(rawQuery);
             const resultsDiv = document.getElementById('searchResults');
             resultsDiv.innerHTML = '';
-
-            if (query.length === 0) {
-                resultsDiv.classList.add('hidden');
-                return;
-            }
+            if (query.length === 0) { resultsDiv.classList.add('hidden'); return; }
 
             let matches = 0;
             for (let id in products) {
@@ -1181,19 +1317,15 @@
                         <span class="font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 shrink-0">${formatRupiah(item.price)}</span>
                     `;
                     row.onclick = () => {
-                        addToCart(id);
-                        showScanFeedback(true, item.name);
-                        triggerVibration();
-                        document.getElementById('manualSearchInput').value = '';
-                        resultsDiv.classList.add('hidden');
+                        addToCart(id); showScanFeedback(true, item.name); triggerVibration();
+                        document.getElementById('manualSearchInput').value = ''; resultsDiv.classList.add('hidden');
                     };
                     resultsDiv.appendChild(row);
                 }
             }
 
-            if (matches > 0) {
-                resultsDiv.classList.remove('hidden');
-            } else {
+            if (matches > 0) resultsDiv.classList.remove('hidden');
+            else {
                 resultsDiv.innerHTML = `<div class="p-3 text-center text-slate-400 text-xs font-semibold">Barang tidak ditemukan</div>`;
                 resultsDiv.classList.remove('hidden');
             }
@@ -1233,10 +1365,7 @@
         }
 
         function toggleVoice() {
-            if (!SpeechRecognition) {
-                alert("Browser HP Anda belum mendukung input suara.");
-                return;
-            }
+            if (!SpeechRecognition) { alert("Browser HP Anda belum mendukung input suara."); return; }
             if (isListening) recognition.stop();
             else recognition.start();
         }
@@ -1244,7 +1373,6 @@
         function matchAndAddToCart(inputText, isExplicitAction = false) {
             const cleanInput = cleanAndFixText(inputText);
             if (cleanInput.length < 2) return;
-
             let matchedIds = [];
 
             for (let id in products) {
@@ -1255,66 +1383,48 @@
                 const targetWords = fullTargetText.split(/\s+/).filter(w => w.length >= 3);
 
                 let isMatch = false;
-                if (cleanInput.includes(fullTargetText) || fullTargetText.includes(cleanInput)) {
-                    isMatch = true;
-                } else {
+                if (cleanInput.includes(fullTargetText) || fullTargetText.includes(cleanInput)) isMatch = true;
+                else {
                     for (let inW of inputWords) {
                         for (let tarW of targetWords) {
-                            if (tarW.includes(inW) || inW.includes(tarW)) {
-                                isMatch = true;
-                                break;
-                            }
+                            if (tarW.includes(inW) || inW.includes(tarW)) { isMatch = true; break; }
                         }
                         if (isMatch) break;
                     }
                 }
-
                 if (isMatch) matchedIds.push(id);
             }
 
             if (matchedIds.length === 1) {
                 const matchedId = matchedIds[0];
-                showScanFeedback(true, products[matchedId].name);
-                triggerVibration();
-                addToCart(matchedId);
+                showScanFeedback(true, products[matchedId].name); triggerVibration(); addToCart(matchedId);
             } else if (matchedIds.length > 1) {
                 document.getElementById('manualSearchInput').value = inputText.trim();
                 filterManualSearch();
                 document.getElementById('liveTextDisplay').innerText = `⚠️ Pilih varian untuk "${inputText}" di bawah`;
                 triggerVibration();
-            } else if (isExplicitAction) {
-                showScanFeedback(false, `Tidak Ditemukan`);
-            } else {
+            } else if (isExplicitAction) showScanFeedback(false, `Tidak Ditemukan`);
+            else {
                 const now = Date.now();
-                if (now - lastFailTime > 2500) {
-                    lastFailTime = now;
-                    showScanFeedback(false, "Tidak Ditemukan");
-                }
+                if (now - lastFailTime > 2500) { lastFailTime = now; showScanFeedback(false, "Tidak Ditemukan"); }
             }
         }
 
         function handleDetectedKey(key) {
             if (isLockingScan) return;
-
             const now = Date.now();
             if (key === lastScannedKey && (now - lastScanTime) < 2000) return;
 
-            lastScannedKey = key;
-            lastScanTime = now;
-
+            lastScannedKey = key; lastScanTime = now;
             const matchedId = findProductIdByBarcode(key);
 
             if (matchedId) {
                 isLockingScan = true;
-                showScanFeedback(true, products[matchedId].name);
-                triggerVibration();
-                addToCart(matchedId);
+                showScanFeedback(true, products[matchedId].name); triggerVibration(); addToCart(matchedId);
                 setTimeout(() => { isLockingScan = false; }, 2000);
             } else {
                 document.getElementById('barcodeInput').value = key;
-                showScanFeedback(false, "Barcode Baru! Pilih Buat / Tautkan");
-                triggerVibration();
-
+                showScanFeedback(false, "Barcode Baru! Pilih Buat / Tautkan"); triggerVibration();
                 setStorageMode('LINK');
                 document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
             }
@@ -1322,11 +1432,8 @@
 
         function addToCart(productId) {
             if (!products[productId]) return;
-            if (cart[productId]) {
-                cart[productId].qty += 1;
-            } else {
-                cart[productId] = { name: products[productId].name, price: products[productId].price, qty: 1 };
-            }
+            if (cart[productId]) cart[productId].qty += 1;
+            else cart[productId] = { name: products[productId].name, price: products[productId].price, qty: 1 };
             renderCart();
         }
 
@@ -1338,16 +1445,8 @@
             }
         }
 
-        function removeFromCart(productId) {
-            delete cart[productId];
-            renderCart();
-        }
-
-        function clearCart() {
-            cart = {};
-            document.getElementById('paidInput').value = '';
-            renderCart();
-        }
+        function removeFromCart(productId) { delete cart[productId]; renderCart(); }
+        function clearCart() { cart = {}; document.getElementById('paidInput').value = ''; renderCart(); }
 
         function renderCart() {
             const cartList = document.getElementById('cartList');
@@ -1394,42 +1493,28 @@
             const originalText = saveBtn.innerText;
             const barcode = document.getElementById('barcodeInput').value.trim().toUpperCase();
 
-            isGlobalBusy = true;
-            saveBtn.disabled = true;
-            saveBtn.innerText = "⏳ Memproses ke Google Sheets...";
+            isGlobalBusy = true; saveBtn.disabled = true; saveBtn.innerText = "⏳ Memproses ke Google Sheets...";
 
             try {
                 if (selectedLinkId !== 'NEW' && selectedLinkId !== 'LINK') {
-                    if (!barcode) {
-                        alert("Isi atau scan barcode terlebih dahulu sebelum menautkan!");
-                        return;
-                    }
+                    if (!barcode) { alert("Isi atau scan barcode terlebih dahulu sebelum menautkan!"); return; }
                     const targetProd = products[selectedLinkId];
 
                     if (!targetProd.barcodes.includes(barcode)) {
                         targetProd.barcodes.push(barcode);
                         await saveToGoogleSheets(selectedLinkId, targetProd.name, targetProd.price, targetProd.barcodes, currentImageData || targetProd.image || "");
-                    } else {
-                        alert(`Barcode "${barcode}" sudah ada di ${targetProd.name}.`);
-                    }
+                    } else alert(`Barcode "${barcode}" sudah ada di ${targetProd.name}.`);
 
-                    cancelEdit();
-                    return;
+                    cancelEdit(); return;
                 }
 
-                if (selectedLinkId === 'LINK') {
-                    alert("Mohon ketik & klik nama barang lama yang mau ditautkan!");
-                    return;
-                }
+                if (selectedLinkId === 'LINK') { alert("Mohon ketik & klik nama barang lama yang mau ditautkan!"); return; }
 
                 const name = document.getElementById('nameInput').value.trim();
                 const rawPrice = document.getElementById('priceInput').value;
                 const price = processAmount(rawPrice);
 
-                if (!name || price === 0) {
-                    alert("Mohon isi nama dan harga barang dengan benar.");
-                    return;
-                }
+                if (!name || price === 0) { alert("Mohon isi nama dan harga barang dengan benar."); return; }
 
                 let targetId = editingId;
                 let bList = [];
@@ -1438,9 +1523,7 @@
                     products[editingId].name = name;
                     products[editingId].price = price;
                     products[editingId].image = currentImageData;
-                    if (barcode && !products[editingId].barcodes.includes(barcode)) {
-                        products[editingId].barcodes.push(barcode);
-                    }
+                    if (barcode && !products[editingId].barcodes.includes(barcode)) products[editingId].barcodes.push(barcode);
                     bList = products[editingId].barcodes;
                 } else {
                     targetId = "PROD_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
@@ -1450,16 +1533,13 @@
                 await saveToGoogleSheets(targetId, name, price, bList, currentImageData);
                 cancelEdit();
             } finally {
-                isGlobalBusy = false;
-                saveBtn.disabled = false;
-                saveBtn.innerText = originalText;
+                isGlobalBusy = false; saveBtn.disabled = false; saveBtn.innerText = originalText;
             }
         }
 
         function editProduct(id) {
             editingId = id;
             const item = products[id];
-
             setStorageMode('NEW');
 
             document.getElementById('barcodeInput').value = (item.barcodes && item.barcodes.length) ? item.barcodes[0] : '';
@@ -1469,24 +1549,12 @@
             if (item.image) {
                 currentImageData = item.image;
                 updatePreview(item.image, "Tersimpan");
-            } else {
-                clearImageChoice();
-            }
+            } else clearImageChoice();
 
             document.getElementById('formTitle').innerText = "✏️ Edit Detail Barang Etalase";
             document.getElementById('saveBtn').innerText = "💾 Simpan Perubahan";
             document.getElementById('cancelEditBtn').classList.remove('hidden');
             document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        async function removeBarcodeFromProduct(id, barcode) {
-            if (isGlobalBusy) return;
-            if (confirm(`Hapus barcode "${barcode}" dari "${products[id].name}"?`)) {
-                isGlobalBusy = true;
-                products[id].barcodes = products[id].barcodes.filter(b => b !== barcode);
-                await saveToGoogleSheets(id, products[id].name, products[id].price, products[id].barcodes, products[id].image || "");
-                isGlobalBusy = false;
-            }
         }
 
         function cancelEdit() {
@@ -1571,8 +1639,11 @@
             });
         }
 
+        // INIT EXECUTION
+        if (qrisImageUrl) document.getElementById('qrisUrlInput').value = qrisImageUrl;
         renderCart();
         loadProductsFromSheets();
+        initLocalAI();
     </script>
 </body>
 </html>
