@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Sembako Pintar - Full Version & Ultra Fast AI</title>
+    <title>Kasir Sembako Pintar - Fast & Unified AI</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -70,7 +70,7 @@
                     <h1 class="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Kasir Sembako Pintar</h1>
                     <p class="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Scan Kilat, Gemini AI, OCR, & Real-time KNN AI
+                        Scan Kilat, Gemini AI, OCR, & Fast KNN AI
                     </p>
                 </div>
             </div>
@@ -519,8 +519,6 @@
         let mobilenetModel = null;
         let isKnnLoaded = false;
         let recordInterval = null;
-        let aiLoopTimer = null;
-        let isAiPredicting = false;
 
         // INSIALISASI AI LOKAL PERTAMA KALI
         async function initLocalAI() {
@@ -852,69 +850,36 @@
             }
         }
 
-        // AKSI KLASIFIKASI AI INSTANT PENJUALAN KASIR (THROTTLED STABIL 250MS)
-        async function predictLocalAIInstant() {
+        // AKSI KLASIFIKASI AI INSTANT KASIR (VERSI AWAL CEPAT + KUNCI STABIL)
+        async function predictLocalAIInstant(videoElement) {
             const isToggleAI = document.getElementById('toggleAIInstant');
             if (!isToggleAI || !isToggleAI.checked) return;
 
-            if (isLockingScan || isAiPredicting || !isKnnLoaded || !knnInstance || knnInstance.getNumClasses() === 0) return;
-
-            const videoElement = document.querySelector("#reader video");
-            if (!videoElement || videoElement.readyState !== 4 || videoElement.paused || videoElement.ended) return;
+            if (isLockingScan || !isKnnLoaded || !knnInstance || knnInstance.getNumClasses() === 0) return;
             
-            isAiPredicting = true;
             try {
                 const logits = mobilenetModel.infer(videoElement, true);
                 const res = await knnInstance.predictClass(logits);
-                logits.dispose(); // CRITICAL: Bersihkan GPU Memory Langsung!
+                logits.dispose(); // Langsung hapus memori frame
 
                 const matchedId = res.label;
-                const confidences = res.confidences || {};
-                const confidence = confidences[matchedId] || 0;
+                const confidence = res.confidences[matchedId] || 0;
 
-                const liveText = document.getElementById('liveTextDisplay');
+                // Jika AI melihat Latar Kosong / Karpet -> Diam saja
+                if (matchedId === 'BACKGROUND_EMPTY') return;
 
-                //  JIKA TERDETEKSI LATAR KOSONG / KARPET
-                if (matchedId === 'BACKGROUND_EMPTY') {
-                    if (liveText && !isLockingScan) {
-                        liveText.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span> AI Melihat: <b class="text-slate-500">Latar Kosong</b> (${Math.round(confidence * 100)}%)`;
-                    }
-                    return;
-                }
-
-                //  JIKA BARANG DITEMUKAN DENGAN CONFIDENCE CUKUP YAKIN (>= 60%)
-                if (matchedId && products[matchedId]) {
-                    const item = products[matchedId];
-                    if (liveText && !isLockingScan) {
-                        liveText.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span> AI Mendeteksi: <b class="text-purple-700">${item.name}</b> (${Math.round(confidence * 100)}%)`;
-                    }
-
-                    if (confidence >= 0.60) {
-                        isLockingScan = true;
-                        showScanFeedback(true, ` Instant AI: ${item.name}`);
-                        triggerVibration();
-                        addToCart(matchedId);
-                        setTimeout(() => { isLockingScan = false; }, 2200);
-                    }
+                // Jika terdeteksi Produk dengan Keyakinan Tinggi (>= 80%)
+                if (matchedId && products[matchedId] && confidence >= 0.80) {
+                    isLockingScan = true; // Kunci agar tidak ter-scan terus-menerus
+                    showScanFeedback(true, ` Instant AI: ${products[matchedId].name}`);
+                    triggerVibration();
+                    addToCart(matchedId);
+                    
+                    // Delay 2.5 detik sebelum scan berikutnya aktif
+                    setTimeout(() => { isLockingScan = false; }, 2500);
                 }
             } catch (e) {
                 console.error("Error predict AI:", e);
-            } finally {
-                isAiPredicting = false;
-            }
-        }
-
-        function startAiLoop() {
-            stopAiLoop();
-            aiLoopTimer = setInterval(() => {
-                predictLocalAIInstant();
-            }, 250); // Berjalan aman 4 kali per detik
-        }
-
-        function stopAiLoop() {
-            if (aiLoopTimer) {
-                clearInterval(aiLoopTimer);
-                aiLoopTimer = null;
             }
         }
 
@@ -1157,15 +1122,13 @@
             }
         }
 
-        // SCANNER KILAT NATIVE HARDWARE SPEED (PENJUALAN)
+        // SCANNER KILAT (PENJUALAN)
         async function startScanner() {
             stopScanner();
             stopAturScanner();
             stopTrainScanner();
             const liveText = document.getElementById('liveTextDisplay');
             if (liveText) liveText.innerText = " Menyalakan Kamera Kasir...";
-
-            startAiLoop(); // Jalankan Loop AI Mandiri!
 
             if ('BarcodeDetector' in window) {
                 try {
@@ -1188,7 +1151,7 @@
                     readerDiv.appendChild(video);
                     video.className = "w-full h-[190px] object-cover rounded-xl";
 
-                    if (liveText) liveText.innerText = " Scan Kilat Barcode & AI Aktif";
+                    if (liveText) liveText.innerText = " Scan Kilat Barcode & On-Device AI Aktif";
 
                     async function renderFrame() {
                         if (!nativeStream || !nativeStream.active) return;
@@ -1196,6 +1159,8 @@
                             const barcodes = await barcodeDetector.detect(video);
                             if (barcodes.length > 0) {
                                 handleDetectedKey(barcodes[0].rawValue);
+                            } else {
+                                predictLocalAIInstant(video);
                             }
                         } catch (e) {}
                         nativeAnimFrame = requestAnimationFrame(renderFrame);
@@ -1212,12 +1177,11 @@
                 (barcode) => handleDetectedKey(barcode),
                 () => {}
             ).then(() => {
-                if (liveText) liveText.innerText = " Kamera Aktif & AI Siap";
+                if (liveText) liveText.innerText = " Kamera Aktif (Mode Standard 30 FPS)";
             });
         }
 
         function stopScanner() {
-            stopAiLoop(); // Hentikan Loop AI
             if (nativeAnimFrame) { cancelAnimationFrame(nativeAnimFrame); nativeAnimFrame = null; }
             if (nativeStream) { nativeStream.getTracks().forEach(track => track.stop()); nativeStream = null; }
             if (html5QrCode && html5QrCode.isScanning) {
