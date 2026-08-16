@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Sembako Pintar - AI 2-Tahap Anti False Scan</title>
+    <title>Kasir Sembako Pintar - Full Version & Ultra Fast AI</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -70,7 +70,7 @@
                     <h1 class="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Kasir Sembako Pintar</h1>
                     <p class="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Scan Kilat, Gemini AI, & AI 2-Tahap Gating
+                        Scan Kilat, Gemini AI, OCR, & Real-time KNN AI
                     </p>
                 </div>
             </div>
@@ -132,12 +132,15 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2 mt-3">
-                        <button onclick="startScanner()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
+                    <div class="flex items-center gap-1.5 mt-3">
+                        <button onclick="startScanner()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1">
                             <i class="fa-solid fa-bolt"></i> Scan Kilat
                         </button>
-                        <button onclick="triggerAIScan()" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5">
+                        <button onclick="triggerAIScan()" class="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-2.5 px-2 rounded-xl text-xs font-bold shadow-md shadow-purple-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-1">
                             <i class="fa-solid fa-wand-magic-sparkles"></i> Gemini AI
+                        </button>
+                        <button onclick="doOCR()" class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-2.5 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-blue-600/20 active:scale-[0.98] transition-all flex items-center justify-center shrink-0" title="Scan Teks Kemasan (OCR)">
+                            <i class="fa-solid fa-font"></i> OCR
                         </button>
                         <button id="micBtn" onclick="toggleVoice()" title="Input Suara" class="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white p-2.5 rounded-xl text-sm font-bold shadow-md shadow-indigo-600/20 active:scale-[0.98] transition-all flex items-center justify-center shrink-0">
                             <i class="fa-solid fa-microphone"></i>
@@ -403,98 +406,85 @@
                         <i class="fa-solid fa-robot"></i>
                     </div>
                     <div>
-                        <h2 class="text-sm font-bold text-slate-800">Studio Pelatihan AI 2-Tahap</h2>
-                        <p class="text-[11px] text-slate-400">Tahap 1 untuk Latar/Karpet HP ini, Tahap 2 untuk Produk</p>
+                        <h2 class="text-sm font-bold text-slate-800">Studio Pelatihan AI Kemasan Produk</h2>
+                        <p class="text-[11px] text-slate-400">Ajarkan visual kemasan produk atau rekam latar belakang kosong HP ini</p>
                     </div>
                 </div>
                 <span id="trainStatusBadge" class="text-[10px] bg-purple-100 text-purple-800 px-2.5 py-1 rounded-full font-bold">Siap Merekam</span>
             </div>
 
-            <div class="relative overflow-hidden rounded-xl border-2 border-purple-300 bg-slate-950 min-h-[200px] flex items-center justify-center">
-                <div id="trainReader" class="w-full bg-black min-h-[200px] flex items-center justify-center"></div>
+            <div class="space-y-1.5 text-xs">
+                <label class="block font-bold text-slate-700"> Pilih Target Yang Ingin Diajari Ke AI:</label>
+                <select id="trainProductSelect" onchange="updateSampleCounterDisplay()" class="w-full p-2.5 border border-purple-200 rounded-xl font-bold bg-purple-50/50 text-purple-900 outline-none focus:ring-2 focus:ring-purple-500/30">
+                    <option value="">-- Pilih Barang dari Etalase --</option>
+                    <option value="BACKGROUND_EMPTY" class="text-rose-600 font-bold"> [REKAM LATAR KOSONG / KARPET / MEJA]</option>
+                </select>
+            </div>
+
+            <div class="relative overflow-hidden rounded-xl border-2 border-purple-300 bg-slate-950 min-h-[220px] flex items-center justify-center">
+                <div id="trainReader" class="w-full bg-black min-h-[220px] flex items-center justify-center"></div>
                 <div id="trainLiveOverlay" class="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[11px] px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
                     <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
                     <span id="trainLiveText">Kamera Rekam Mati</span>
                 </div>
             </div>
 
-            <div class="flex items-center gap-2">
-                <button onclick="startTrainScanner()" class="flex-1 bg-purple-700 hover:bg-purple-800 text-white py-2 px-3 rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-video"></i> Nyalakan Kamera Rekam
-                </button>
-                <button onclick="stopTrainScanner()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 px-3 rounded-xl text-xs font-bold transition">
-                    <i class="fa-solid fa-circle-stop"></i> Stop Kamera
-                </button>
-            </div>
-
-            <div class="bg-amber-50/90 border-2 border-amber-300 p-3.5 rounded-xl space-y-2 text-xs shadow-xs">
-                <div class="flex justify-between items-center font-extrabold text-amber-950">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-amber-600"></i> TAHAP 1: Rekam Latar HP Ini (Karpet/Meja)</span>
-                    <span id="bgSampleCounterBadge" class="bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full text-[10px]">0 Sampel Latar</span>
-                </div>
-                <p class="text-[10px] text-amber-900">Arahkan kamera ke karpet/lantai kosong HP ini, lalu tahan tombol di bawah 3 detik. Ini mengunci agar AI tidak ter-scan palsu!</p>
-                
-                <button id="recordBgBtn" 
-                    onmousedown="startRecordingBackground(event)" 
-                    onmouseup="stopRecordingBackground(event)" 
-                    ontouchstart="startRecordingBackground(event)" 
-                    ontouchend="stopRecordingBackground(event)" 
-                    class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 px-3 rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-2 no-select">
-                    <i class="fa-solid fa-camera"></i> TAHAN UNTUK REKAM LATAR HARI INI
-                </button>
-            </div>
-
-            <div class="bg-purple-50/80 border-2 border-purple-300 p-3.5 rounded-xl space-y-2.5 text-xs shadow-xs">
-                <div class="flex justify-between items-center font-extrabold text-purple-950">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-box-open text-purple-600"></i> TAHAP 2: Rekam Kemasan Produk</span>
-                    <span id="prodSampleCounterBadge" class="bg-purple-200 text-purple-900 px-2 py-0.5 rounded-full text-[10px]">0 Sampel Produk</span>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="block font-bold text-slate-700">Pilih Barang Yang Ingin Diajari Ke AI:</label>
-                    <select id="trainProductSelect" onchange="updateSampleCounterDisplay()" class="w-full p-2 border border-purple-200 rounded-lg font-bold bg-white text-purple-900 outline-none">
-                        <option value="">-- Pilih Barang dari Etalase --</option>
-                    </select>
-                </div>
-
-                <button id="recordProdBtn" 
-                    onmousedown="startRecordingProduct(event)" 
-                    onmouseup="stopRecordingProduct(event)" 
-                    ontouchstart="startRecordingProduct(event)" 
-                    ontouchend="stopRecordingProduct(event)" 
-                    class="w-full bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white py-3 px-3 rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-2 no-select">
-                    <i class="fa-solid fa-camera font-bold text-base"></i> TAHAN UNTUK REKAM KEMASAN BARANG
-                </button>
-            </div>
-
-            <div class="bg-indigo-50/80 border border-indigo-200 p-3 rounded-xl text-xs space-y-2">
-                <div class="flex items-center justify-between">
-                    <span class="font-bold text-indigo-950 flex items-center gap-1.5">
-                        <i class="fa-solid fa-mobile-screen-button"></i> Pindahkan Memori Produk Ke HP Lain:
-                    </span>
-                    <span class="text-[10px] bg-indigo-200 text-indigo-900 px-2 py-0.5 rounded-full font-bold">File Json</span>
-                </div>
-                <div class="flex flex-wrap gap-2 pt-1">
-                    <button onclick="exportKnnDatasetToFile()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-download"></i> Ekspor File Produk (.json)
+            <div class="space-y-3">
+                <div class="flex items-center gap-2">
+                    <button onclick="startTrainScanner()" class="flex-1 bg-purple-700 hover:bg-purple-800 text-white py-2.5 px-3 rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-video"></i> Nyalakan Kamera Rekam
                     </button>
-                    <label class="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer text-center">
-                        <i class="fa-solid fa-upload"></i> Impor File (.json)
-                        <input type="file" accept=".json" onchange="importKnnDatasetFromFile(event)" class="hidden">
-                    </label>
+                    <button onclick="stopTrainScanner()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-3 rounded-xl text-xs font-bold transition">
+                        <i class="fa-solid fa-circle-stop"></i> Stop Kamera
+                    </button>
                 </div>
-            </div>
 
-            <div class="flex gap-2 pt-1">
-                <button onclick="saveKnnDatasetToLocalStorage()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-floppy-disk"></i> Simpan Permanen HP Ini
-                </button>
-                <button onclick="clearKnnProductDataset()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2.5 rounded-xl text-xs font-bold transition" title="Hapus Sampel Produk Ini">
-                    <i class="fa-solid fa-trash-can"></i> Hapus Produk Ini
-                </button>
-                <button onclick="clearKnnDataset()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-2.5 rounded-xl text-xs font-bold transition" title="Hapus Semua Memori AI">
-                    <i class="fa-solid fa-power-off"></i> Reset Memori
-                </button>
+                <div class="bg-purple-50/80 border border-purple-200 p-3.5 rounded-xl space-y-2.5 text-xs">
+                    <div class="flex justify-between items-center font-bold text-purple-950">
+                        <span>Statistik Sampel Target Ini:</span>
+                        <span id="sampleCounterBadge" class="bg-purple-200 text-purple-900 px-2.5 py-0.5 rounded-full">0 Sampel</span>
+                    </div>
+
+                    <button id="recordBtn" 
+                        onmousedown="startRecordingSample(event)" 
+                        onmouseup="stopRecordingSample(event)" 
+                        ontouchstart="startRecordingSample(event)" 
+                        ontouchend="stopRecordingSample(event)" 
+                        class="w-full bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white py-3 px-3 rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-2 no-select">
+                        <i class="fa-solid fa-camera font-bold text-base"></i> TAHAN UNTUK REKAM SAMPEL
+                    </button>
+                    <p class="text-[10px] text-slate-500 text-center">Tahan tombol sambil gerakkan HP perlahan di depan objek hingga 20-30 sampel.</p>
+                </div>
+
+                <div class="bg-indigo-50/80 border border-indigo-200 p-3.5 rounded-xl text-xs space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-indigo-950 flex items-center gap-1.5">
+                            <i class="fa-solid fa-mobile-screen-button"></i> Pindahkan Memori AI Ke HP Lain:
+                        </span>
+                        <span class="text-[10px] bg-indigo-200 text-indigo-900 px-2 py-0.5 rounded-full font-bold">Fitur Multi-HP</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <button onclick="exportKnnDatasetToFile()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-download"></i> Ekspor File (.json)
+                        </button>
+                        <label class="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer text-center">
+                            <i class="fa-solid fa-upload"></i> Impor File (.json)
+                            <input type="file" accept=".json" onchange="importKnnDatasetFromFile(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 pt-1">
+                    <button onclick="saveKnnDatasetToLocalStorage()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i> Simpan Permanen HP Ini
+                    </button>
+                    <button onclick="clearKnnProductDataset()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2.5 rounded-xl text-xs font-bold transition" title="Hapus Sampel Produk Ini">
+                        <i class="fa-solid fa-trash-can"></i> Hapus Target Ini
+                    </button>
+                    <button onclick="clearKnnDataset()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-2.5 rounded-xl text-xs font-bold transition" title="Hapus Semua Memori AI">
+                        <i class="fa-solid fa-power-off"></i> Reset Memori
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -510,7 +500,6 @@
         let trainNativeStream = null;
         let nativeAnimFrame = null;
         let aturAnimFrame = null;
-        let ocrInterval = null;
         let isLockingScan = false;
         let editingId = null;
         let selectedLinkId = 'NEW';
@@ -530,6 +519,8 @@
         let mobilenetModel = null;
         let isKnnLoaded = false;
         let recordInterval = null;
+        let aiLoopTimer = null;
+        let isAiPredicting = false;
 
         // INSIALISASI AI LOKAL PERTAMA KALI
         async function initLocalAI() {
@@ -559,7 +550,10 @@
             const select = document.getElementById('trainProductSelect');
             if (!select) return;
             const currentVal = select.value;
-            select.innerHTML = `<option value="">-- Pilih Barang dari Etalase --</option>`;
+            select.innerHTML = `
+                <option value="">-- Pilih Barang dari Etalase --</option>
+                <option value="BACKGROUND_EMPTY" class="text-rose-600 font-bold"> [REKAM LATAR KOSONG / KARPET / MEJA]</option>
+            `;
             
             for (let id in products) {
                 const opt = document.createElement('option');
@@ -567,7 +561,7 @@
                 opt.innerText = `${products[id].name} (${formatRupiah(products[id].price)})`;
                 select.appendChild(opt);
             }
-            if (currentVal && products[currentVal]) select.value = currentVal;
+            if (currentVal && (products[currentVal] || currentVal === 'BACKGROUND_EMPTY')) select.value = currentVal;
             updateSampleCounterDisplay();
         }
 
@@ -669,7 +663,7 @@
                 const readerDiv = document.getElementById("trainReader");
                 readerDiv.innerHTML = "";
                 readerDiv.appendChild(video);
-                video.className = "w-full h-[200px] object-cover rounded-xl";
+                video.className = "w-full h-[220px] object-cover rounded-xl";
 
                 if (liveText) liveText.innerText = "Kamera Rekam Aktif";
             } catch (err) {
@@ -678,8 +672,7 @@
         }
 
         function stopTrainScanner() {
-            stopRecordingBackground();
-            stopRecordingProduct();
+            stopRecordingSample();
             if (trainNativeStream) {
                 trainNativeStream.getTracks().forEach(track => track.stop());
                 trainNativeStream = null;
@@ -690,37 +683,18 @@
             if (liveText) liveText.innerText = "Kamera Rekam Mati";
         }
 
-        // TAHAP 1: REKAM LATAR BELAKANG HP INI
-        function startRecordingBackground(e) {
+        // FUNGSI REKAM SAMPEL AI
+        function startRecordingSample(e) {
             if (e && e.cancelable) e.preventDefault();
-            recordSampleForTarget('BACKGROUND_EMPTY', 'recordBgBtn', ' SEDANG MEREKAM LATAR...');
-        }
 
-        function stopRecordingBackground(e) {
-            if (e && e.cancelable) e.preventDefault();
-            stopRecordSample('recordBgBtn', '<i class="fa-solid fa-camera"></i> TAHAN UNTUK REKAM LATAR HARI INI');
-        }
-
-        // TAHAP 2: REKAM KEMASAN PRODUK
-        function startRecordingProduct(e) {
-            if (e && e.cancelable) e.preventDefault();
             const select = document.getElementById('trainProductSelect');
             const targetId = select ? select.value : null;
 
             if (!targetId) {
-                alert("Pilih barang dari dropdown terlebih dahulu sebelum merekam!");
+                alert("Pilih barang atau [Latar Kosong] terlebih dahulu sebelum merekam!");
                 return;
             }
 
-            recordSampleForTarget(targetId, 'recordProdBtn', ' SEDANG MEREKAM PRODUK...');
-        }
-
-        function stopRecordingProduct(e) {
-            if (e && e.cancelable) e.preventDefault();
-            stopRecordSample('recordProdBtn', '<i class="fa-solid fa-camera font-bold text-base"></i> TAHAN UNTUK REKAM KEMASAN BARANG');
-        }
-
-        function recordSampleForTarget(targetId, btnId, activeText) {
             const videoElement = document.querySelector("#trainReader video");
             if (!videoElement || videoElement.readyState !== 4) {
                 alert("Nyalakan Kamera Rekam terlebih dahulu!");
@@ -732,8 +706,10 @@
                 return;
             }
 
-            const recordBtn = document.getElementById(btnId);
-            if (recordBtn) recordBtn.innerText = activeText;
+            const recordBtn = document.getElementById('recordBtn');
+            recordBtn.innerHTML = `<i class="fa-solid fa-circle-dot animate-ping"></i> SEDANG MEREKAM SAMPEL...`;
+            recordBtn.classList.replace('from-purple-700', 'from-rose-600');
+            recordBtn.classList.replace('to-indigo-700', 'to-red-600');
 
             if (recordInterval) clearInterval(recordInterval);
 
@@ -748,33 +724,34 @@
             }, 150);
         }
 
-        function stopRecordSample(btnId, defaultHtml) {
+        function stopRecordingSample(e) {
+            if (e && e.cancelable) e.preventDefault();
+
             if (recordInterval) {
                 clearInterval(recordInterval);
                 recordInterval = null;
             }
-            const recordBtn = document.getElementById(btnId);
-            if (recordBtn) recordBtn.innerHTML = defaultHtml;
+            const recordBtn = document.getElementById('recordBtn');
+            if (recordBtn) {
+                recordBtn.innerHTML = `<i class="fa-solid fa-camera font-bold text-base"></i> TAHAN UNTUK REKAM SAMPEL`;
+                recordBtn.classList.replace('from-rose-600', 'from-purple-700');
+                recordBtn.classList.replace('to-red-600', 'to-indigo-700');
+            }
         }
 
         function updateSampleCounterDisplay() {
-            const bgBadge = document.getElementById('bgSampleCounterBadge');
-            const prodBadge = document.getElementById('prodSampleCounterBadge');
+            const counter = document.getElementById('sampleCounterBadge');
             const select = document.getElementById('trainProductSelect');
             const targetId = select ? select.value : null;
 
-            if (knnInstance) {
-                const exampleCount = knnInstance.getClassExampleCount();
-                
-                if (bgBadge) bgBadge.innerText = `${exampleCount['BACKGROUND_EMPTY'] || 0} Sampel Latar`;
-                
-                if (prodBadge) {
-                    if (targetId && targetId !== 'BACKGROUND_EMPTY') {
-                        prodBadge.innerText = `${exampleCount[targetId] || 0} Sampel Produk`;
-                    } else {
-                        prodBadge.innerText = `0 Sampel Produk`;
-                    }
+            if (knnInstance && counter) {
+                if (!targetId) {
+                    counter.innerText = "0 Sampel";
+                    return;
                 }
+                const exampleCount = knnInstance.getClassExampleCount();
+                const count = exampleCount[targetId] || 0;
+                counter.innerText = `${count} Sampel AI`;
             }
         }
 
@@ -840,7 +817,7 @@
                     });
                     saveKnnDatasetToLocalStorage();
                     updateSampleCounterDisplay();
-                    alert(" Berhasil! Memori AI produk telah di-impor. Jangan lupa rekam TAHAP 1 (Latar Belakang HP Ini) jika belum!");
+                    alert(" Berhasil! Memori AI produk telah di-impor!");
                 } catch(err) {
                     alert(" File memori JSON tidak valid!");
                 }
@@ -852,10 +829,10 @@
             const select = document.getElementById('trainProductSelect');
             const targetId = select ? select.value : null;
             if (!targetId) {
-                alert("Pilih barang terlebih dahulu di dropdown!");
+                alert("Pilih target terlebih dahulu di dropdown!");
                 return;
             }
-            const targetName = products[targetId] ? products[targetId].name : targetId;
+            const targetName = (targetId === 'BACKGROUND_EMPTY') ? "Latar Belakang Kosong" : (products[targetId] ? products[targetId].name : targetId);
             if (confirm(`Hapus sampel hafalan AI khusus untuk "${targetName}"?`)) {
                 if (knnInstance) {
                     knnInstance.clearClass(targetId);
@@ -875,73 +852,108 @@
             }
         }
 
-        // ALGORITMA SISTEM 2-TAHAP GATING DETEKSI (ANTI-NERKA & ANTI-SCAN PALSU)
-        async function predictLocalAIInstant(videoElement) {
+        // AKSI KLASIFIKASI AI INSTANT PENJUALAN KASIR (THROTTLED STABIL 250MS)
+        async function predictLocalAIInstant() {
             const isToggleAI = document.getElementById('toggleAIInstant');
             if (!isToggleAI || !isToggleAI.checked) return;
 
-            if (isLockingScan || !isKnnLoaded || !knnInstance || knnInstance.getNumClasses() === 0) return;
+            if (isLockingScan || isAiPredicting || !isKnnLoaded || !knnInstance || knnInstance.getNumClasses() === 0) return;
+
+            const videoElement = document.querySelector("#reader video");
+            if (!videoElement || videoElement.readyState !== 4 || videoElement.paused || videoElement.ended) return;
             
+            isAiPredicting = true;
             try {
-                const dataset = knnInstance.getClassifierDataset();
+                const logits = mobilenetModel.infer(videoElement, true);
+                const res = await knnInstance.predictClass(logits);
+                logits.dispose(); // CRITICAL: Bersihkan GPU Memory Langsung!
 
-                //  TAHAP 1 GATING (PENYARING LATAR BELAKANG HP INI)
-                if (dataset['BACKGROUND_EMPTY']) {
-                    const currentLogits = mobilenetModel.infer(videoElement, true);
-                    
-                    const bgSimilarity = tf.tidy(() => {
-                        const bgCentroid = dataset['BACKGROUND_EMPTY'].mean(0);
-                        const a = currentLogits.flatten();
-                        const b = bgCentroid.flatten();
-                        return a.dot(b).div(a.norm().mul(b.norm())).dataSync()[0];
-                    });
+                const matchedId = res.label;
+                const confidences = res.confidences || {};
+                const confidence = confidences[matchedId] || 0;
 
-                    // Jika kamera melihat Latar Belakang HP ini (> 0.74), LANGSUNG STOP! Jangan terbak produk!
-                    if (bgSimilarity >= 0.74) {
-                        currentLogits.dispose();
-                        return; // REJECT LANGSUNG!
+                const liveText = document.getElementById('liveTextDisplay');
+
+                //  JIKA TERDETEKSI LATAR KOSONG / KARPET
+                if (matchedId === 'BACKGROUND_EMPTY') {
+                    if (liveText && !isLockingScan) {
+                        liveText.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span> AI Melihat: <b class="text-slate-500">Latar Kosong</b> (${Math.round(confidence * 100)}%)`;
+                    }
+                    return;
+                }
+
+                //  JIKA BARANG DITEMUKAN DENGAN CONFIDENCE CUKUP YAKIN (>= 60%)
+                if (matchedId && products[matchedId]) {
+                    const item = products[matchedId];
+                    if (liveText && !isLockingScan) {
+                        liveText.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span> AI Mendeteksi: <b class="text-purple-700">${item.name}</b> (${Math.round(confidence * 100)}%)`;
                     }
 
-                    //  TAHAP 2 (PENCOCOKAN PRODUK)
-                    const res = await knnInstance.predictClass(currentLogits);
-                    const matchedId = res.label;
-
-                    if (!matchedId || matchedId === 'BACKGROUND_EMPTY' || !products[matchedId]) {
-                        currentLogits.dispose();
-                        return;
-                    }
-
-                    if (dataset[matchedId]) {
-                        const similarity = tf.tidy(() => {
-                            const centroid = dataset[matchedId].mean(0);
-                            const a = currentLogits.flatten();
-                            const b = centroid.flatten();
-                            return a.dot(b).div(a.norm().mul(b.norm())).dataSync()[0];
-                        });
-
-                        currentLogits.dispose();
-
-                        // Ambil produk jika kemiripan sangat tinggi (>= 0.83)
-                        if (similarity >= 0.83 && res.confidences[matchedId] >= 0.80) {
-                            isLockingScan = true;
-                            showScanFeedback(true, ` Instant AI: ${products[matchedId].name}`);
-                            triggerVibration();
-                            addToCart(matchedId);
-                            setTimeout(() => { isLockingScan = false; }, 2000);
-                        }
-                    } else {
-                        currentLogits.dispose();
-                    }
-                } else {
-                    // Jika HP ini BELUM me-rekam Latar Belakang (Tahap 1), tahan AI scan otomatis agar tidak tebak sembarangan
-                    const statusBadge = document.getElementById('aiStatusBadge');
-                    if (statusBadge) {
-                        statusBadge.innerText = " Rekam Tahap 1 Latar Dulu";
-                        statusBadge.className = "text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold";
+                    if (confidence >= 0.60) {
+                        isLockingScan = true;
+                        showScanFeedback(true, ` Instant AI: ${item.name}`);
+                        triggerVibration();
+                        addToCart(matchedId);
+                        setTimeout(() => { isLockingScan = false; }, 2200);
                     }
                 }
             } catch (e) {
                 console.error("Error predict AI:", e);
+            } finally {
+                isAiPredicting = false;
+            }
+        }
+
+        function startAiLoop() {
+            stopAiLoop();
+            aiLoopTimer = setInterval(() => {
+                predictLocalAIInstant();
+            }, 250); // Berjalan aman 4 kali per detik
+        }
+
+        function stopAiLoop() {
+            if (aiLoopTimer) {
+                clearInterval(aiLoopTimer);
+                aiLoopTimer = null;
+            }
+        }
+
+        // FUNGSI SCAN TEKS KEMASAN (OCR TESSERACT)
+        async function doOCR() {
+            const videoElement = document.querySelector("#reader video");
+            const liveText = document.getElementById('liveTextDisplay');
+            
+            if (!videoElement || videoElement.readyState !== 4) {
+                if (liveText) liveText.innerText = " Menyalakan kamera...";
+                await startScanner();
+                setTimeout(() => { doOCR(); }, 1200);
+                return;
+            }
+
+            if (liveText) liveText.innerText = " Membaca Teks Kemasan (OCR)...";
+
+            const canvas = document.createElement("canvas");
+            canvas.width = videoElement.videoWidth || 640;
+            canvas.height = videoElement.videoHeight || 480;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+            try {
+                const worker = await Tesseract.createWorker('ind');
+                const ret = await worker.recognize(canvas);
+                await worker.terminate();
+
+                const ocrResultText = ret.data.text;
+                if (ocrResultText && ocrResultText.trim().length > 0) {
+                    if (liveText) liveText.innerText = ` Teks Terbaca: "${ocrResultText.trim().substring(0, 30)}..."`;
+                    matchAndAddToCart(ocrResultText, true);
+                } else {
+                    showScanFeedback(false, "Teks Tidak Terbaca");
+                    if (liveText) liveText.innerText = " Tidak ada teks yang terbaca di kemasan.";
+                }
+            } catch (err) {
+                showScanFeedback(false, "Gagal OCR");
+                if (liveText) liveText.innerText = " Gagal membaca teks kemasan.";
             }
         }
 
@@ -983,7 +995,7 @@
             clearCart();
         }
 
-        // LOGIKA SWITCH TAB HALAMAN
+        // LOGIKA SWITCH TAB HALAMAN (4 MENU UTAMA)
         function switchTab(tabName) {
             const pageKasir = document.getElementById('pageKasir');
             const pageAturBarang = document.getElementById('pageAturBarang');
@@ -1145,13 +1157,15 @@
             }
         }
 
-        // SCANNER KILAT NATIVE HARDWARE SPEED
+        // SCANNER KILAT NATIVE HARDWARE SPEED (PENJUALAN)
         async function startScanner() {
             stopScanner();
             stopAturScanner();
             stopTrainScanner();
             const liveText = document.getElementById('liveTextDisplay');
             if (liveText) liveText.innerText = " Menyalakan Kamera Kasir...";
+
+            startAiLoop(); // Jalankan Loop AI Mandiri!
 
             if ('BarcodeDetector' in window) {
                 try {
@@ -1174,7 +1188,7 @@
                     readerDiv.appendChild(video);
                     video.className = "w-full h-[190px] object-cover rounded-xl";
 
-                    if (liveText) liveText.innerText = " Scan Kilat Barcode & On-Device AI Aktif";
+                    if (liveText) liveText.innerText = " Scan Kilat Barcode & AI Aktif";
 
                     async function renderFrame() {
                         if (!nativeStream || !nativeStream.active) return;
@@ -1182,8 +1196,6 @@
                             const barcodes = await barcodeDetector.detect(video);
                             if (barcodes.length > 0) {
                                 handleDetectedKey(barcodes[0].rawValue);
-                            } else {
-                                predictLocalAIInstant(video);
                             }
                         } catch (e) {}
                         nativeAnimFrame = requestAnimationFrame(renderFrame);
@@ -1200,12 +1212,12 @@
                 (barcode) => handleDetectedKey(barcode),
                 () => {}
             ).then(() => {
-                if (liveText) liveText.innerText = " Kamera Aktif (Mode Standard 30 FPS)";
+                if (liveText) liveText.innerText = " Kamera Aktif & AI Siap";
             });
         }
 
         function stopScanner() {
-            if (ocrInterval) { clearInterval(ocrInterval); ocrInterval = null; }
+            stopAiLoop(); // Hentikan Loop AI
             if (nativeAnimFrame) { cancelAnimationFrame(nativeAnimFrame); nativeAnimFrame = null; }
             if (nativeStream) { nativeStream.getTracks().forEach(track => track.stop()); nativeStream = null; }
             if (html5QrCode && html5QrCode.isScanning) {
@@ -1805,7 +1817,7 @@
                     <div class="text-center py-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                         <span class="text-2xl block mb-1 text-slate-400"><i class="fa-solid fa-cart-arrow-down"></i></span>
                         <p class="text-slate-400 font-medium">Keranjang masih kosong</p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">Scan barcode kilat, AI Live, sebut nama (mic), atau cari manual.</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Scan barcode kilat, AI Live, OCR, sebut nama (mic), atau cari manual.</p>
                     </div>
                 `;
             } else {
