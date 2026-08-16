@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kasir Sembako Pintar - Fast & Unified AI</title>
+    <title>Kasir Sembako Pintar - Fast OCR & Barcode System</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,10 +14,6 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier@1.2.4/dist/knn-classifier.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -70,23 +66,20 @@
                     <h1 class="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Kasir Sembako Pintar</h1>
                     <p class="text-[11px] text-slate-500 font-medium mt-1 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Scan Kilat, Gemini AI, & On-Device AI
+                        Scan Barcode Kilat, Live OCR Teks, & Gemini AI
                     </p>
                 </div>
             </div>
             
             <div class="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
-                <button id="tabKasirBtn" onclick="switchTab('kasir')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white shadow-sm flex items-center gap-1.5">
+                <button id="tabKasirBtn" onclick="switchTab('kasir')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white shadow-sm flex items-center gap-1.5">
                     <i class="fa-solid fa-cart-shopping"></i> Kasir & Cek Harga
                 </button>
-                <button id="tabAturBtn" onclick="switchTab('atur')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+                <button id="tabAturBtn" onclick="switchTab('atur')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
                     <i class="fa-solid fa-box font-bold"></i> Atur Barang
                 </button>
-                <button id="tabKalkulatorBtn" onclick="switchTab('kalkulator')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+                <button id="tabKalkulatorBtn" onclick="switchTab('kalkulator')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
                     <i class="fa-solid fa-calculator"></i> Kalkulator Modal
-                </button>
-                <button id="tabPelatihanBtn" onclick="switchTab('pelatihan')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-purple-700 bg-purple-100/70 hover:bg-purple-200 flex items-center gap-1.5">
-                    <i class="fa-solid fa-robot"></i> Rekam AI Kemasan
                 </button>
             </div>
         </header>
@@ -99,14 +92,7 @@
                         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                             <i class="fa-solid fa-bolt text-emerald-500"></i> Scanner Penjualan
                         </h2>
-                        <div class="flex items-center gap-2">
-                            <label class="inline-flex items-center cursor-pointer text-[10px] font-bold text-slate-600 gap-1">
-                                <input type="checkbox" id="toggleAIInstant" checked class="sr-only peer">
-                                <div class="w-7 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-600 relative"></div>
-                                AI Kemasan
-                            </label>
-                            <span id="aiStatusBadge" class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">Memuat...</span>
-                        </div>
+                        <span id="scannerStatusBadge" class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Siap</span>
                     </div>
 
                     <div class="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950 min-h-[190px] flex items-center justify-center scan-animation">
@@ -396,95 +382,6 @@
             </div>
         </div>
 
-        <div id="pagePelatihan" class="hidden max-w-2xl mx-auto bg-white border border-purple-200 rounded-2xl p-5 shadow-sm space-y-4">
-            <div class="flex items-center justify-between border-b border-purple-100 pb-3">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg">
-                        <i class="fa-solid fa-robot"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-sm font-bold text-slate-800">Studio Pelatihan AI Kemasan Produk</h2>
-                        <p class="text-[11px] text-slate-400">Ajarkan visual kemasan produk atau rekam latar belakang kosong HP ini</p>
-                    </div>
-                </div>
-                <span id="trainStatusBadge" class="text-[10px] bg-purple-100 text-purple-800 px-2.5 py-1 rounded-full font-bold">Siap Merekam</span>
-            </div>
-
-            <div class="space-y-1.5 text-xs">
-                <label class="block font-bold text-slate-700"> Pilih Target Yang Ingin Diajari Ke AI:</label>
-                <select id="trainProductSelect" onchange="updateSampleCounterDisplay()" class="w-full p-2.5 border border-purple-200 rounded-xl font-bold bg-purple-50/50 text-purple-900 outline-none focus:ring-2 focus:ring-purple-500/30">
-                    <option value="">-- Pilih Barang dari Etalase --</option>
-                    <option value="BACKGROUND_EMPTY" class="text-rose-600 font-bold"> [REKAM LATAR KOSONG / KARPET / MEJA]</option>
-                </select>
-            </div>
-
-            <div class="relative overflow-hidden rounded-xl border-2 border-purple-300 bg-slate-950 min-h-[220px] flex items-center justify-center">
-                <div id="trainReader" class="w-full bg-black min-h-[220px] flex items-center justify-center"></div>
-                <div id="trainLiveOverlay" class="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[11px] px-3 py-1 rounded-full font-bold flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
-                    <span id="trainLiveText">Kamera Rekam Mati</span>
-                </div>
-            </div>
-
-            <div class="space-y-3">
-                <div class="flex items-center gap-2">
-                    <button onclick="startTrainScanner()" class="flex-1 bg-purple-700 hover:bg-purple-800 text-white py-2.5 px-3 rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-video"></i> Nyalakan Kamera Rekam
-                    </button>
-                    <button onclick="stopTrainScanner()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-3 rounded-xl text-xs font-bold transition">
-                        <i class="fa-solid fa-circle-stop"></i> Stop Kamera
-                    </button>
-                </div>
-
-                <div class="bg-purple-50/80 border border-purple-200 p-3.5 rounded-xl space-y-2.5 text-xs">
-                    <div class="flex justify-between items-center font-bold text-purple-950">
-                        <span>Statistik Sampel Target Ini:</span>
-                        <span id="sampleCounterBadge" class="bg-purple-200 text-purple-900 px-2.5 py-0.5 rounded-full">0 Sampel</span>
-                    </div>
-
-                    <button id="recordBtn" 
-                        onmousedown="startRecordingSample(event)" 
-                        onmouseup="stopRecordingSample(event)" 
-                        ontouchstart="startRecordingSample(event)" 
-                        ontouchend="stopRecordingSample(event)" 
-                        class="w-full bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white py-3 px-3 rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center gap-2 no-select">
-                        <i class="fa-solid fa-camera font-bold text-base"></i> TAHAN UNTUK REKAM SAMPEL
-                    </button>
-                    <p class="text-[10px] text-slate-500 text-center">Tahan tombol sambil gerakkan HP perlahan di depan objek hingga 20-30 sampel.</p>
-                </div>
-
-                <div class="bg-indigo-50/80 border border-indigo-200 p-3.5 rounded-xl text-xs space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-indigo-950 flex items-center gap-1.5">
-                            <i class="fa-solid fa-mobile-screen-button"></i> Pindahkan Memori AI Ke HP Lain:
-                        </span>
-                        <span class="text-[10px] bg-indigo-200 text-indigo-900 px-2 py-0.5 rounded-full font-bold">Fitur Multi-HP</span>
-                    </div>
-                    <div class="flex flex-wrap gap-2 pt-1">
-                        <button onclick="exportKnnDatasetToFile()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-download"></i> Ekspor File (.json)
-                        </button>
-                        <label class="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2 px-3 rounded-xl font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer text-center">
-                            <i class="fa-solid fa-upload"></i> Impor File (.json)
-                            <input type="file" accept=".json" onchange="importKnnDatasetFromFile(event)" class="hidden">
-                        </label>
-                    </div>
-                </div>
-
-                <div class="flex gap-2 pt-1">
-                    <button onclick="saveKnnDatasetToLocalStorage()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-floppy-disk"></i> Simpan Permanen HP Ini
-                    </button>
-                    <button onclick="clearKnnProductDataset()" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2.5 rounded-xl text-xs font-bold transition" title="Hapus Sampel Produk Ini">
-                        <i class="fa-solid fa-trash-can"></i> Hapus Target Ini
-                    </button>
-                    <button onclick="clearKnnDataset()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-2.5 rounded-xl text-xs font-bold transition" title="Hapus Semua Memori AI">
-                        <i class="fa-solid fa-power-off"></i> Reset Memori
-                    </button>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <script>
@@ -494,9 +391,10 @@
         let aturHtml5QrCode = null;
         let nativeStream = null;
         let aturNativeStream = null;
-        let trainNativeStream = null;
         let nativeAnimFrame = null;
         let aturAnimFrame = null;
+        let ocrTimer = null;
+        let isOcrProcessing = false;
         let isLockingScan = false;
         let editingId = null;
         let selectedLinkId = 'NEW';
@@ -507,65 +405,25 @@
         let products = {};
         let cart = {}; 
         let lastScannedKey = null;
-        let lastScannedId = null;
         let lastScanTime = 0;
         let lastFailTime = 0;
         let failTimer = null;
 
-        // VARIABLE AI LOKAL (MOBILE NET + KNN)
-        let knnInstance = null;
-        let mobilenetModel = null;
-        let isKnnLoaded = false;
-        let recordInterval = null;
+        let tesseractWorker = null;
 
-        // INSIALISASI AI LOKAL PERTAMA KALI
-        async function initLocalAI() {
-            const statusBadge = document.getElementById('aiStatusBadge');
+        // INSIALISASI WORKER TESSERACT OCR LOKAL CEPAT
+        async function initOcrWorker() {
             try {
-                knnInstance = knnClassifier.create();
-                mobilenetModel = await mobilenet.load();
-                isKnnLoaded = true;
-
-                loadKnnDatasetFromLocalStorage();
-
-                if (statusBadge) {
-                    statusBadge.innerText = " AI Ready";
-                    statusBadge.className = "text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold";
-                }
+                tesseractWorker = await Tesseract.createWorker('ind');
             } catch (err) {
-                console.error("Gagal load AI Lokal:", err);
-                if (statusBadge) {
-                    statusBadge.innerText = " Hardware Speed";
-                    statusBadge.className = "text-[10px] bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full font-bold";
-                }
+                console.error("OCR Worker Init Failed:", err);
             }
-        }
-
-        // POPULATE OPTION DROPDOWN BARANG UNTUK PELATIHAN AI
-        function populateTrainProductSelect() {
-            const select = document.getElementById('trainProductSelect');
-            if (!select) return;
-            const currentVal = select.value;
-            select.innerHTML = `
-                <option value="">-- Pilih Barang dari Etalase --</option>
-                <option value="BACKGROUND_EMPTY" class="text-rose-600 font-bold"> [REKAM LATAR KOSONG / KARPET / MEJA]</option>
-            `;
-            
-            for (let id in products) {
-                const opt = document.createElement('option');
-                opt.value = id;
-                opt.innerText = `${products[id].name} (${formatRupiah(products[id].price)})`;
-                select.appendChild(opt);
-            }
-            if (currentVal && (products[currentVal] || currentVal === 'BACKGROUND_EMPTY')) select.value = currentVal;
-            updateSampleCounterDisplay();
         }
 
         // SCANNER KAMERA KHUSUS MENU ATUR BARANG
         async function startAturScanner() {
             stopAturScanner();
             stopScanner();
-            stopTrainScanner();
             const liveText = document.getElementById('aturLiveText');
             if (liveText) liveText.innerText = "Kamera Aktif...";
 
@@ -637,253 +495,53 @@
             if (liveText) liveText.innerText = "Kamera Mati";
         }
 
-        // SCANNER KAMERA KHUSUS MENU PELATIHAN AI
-        async function startTrainScanner() {
-            stopTrainScanner();
-            stopScanner();
-            stopAturScanner();
-            const liveText = document.getElementById('trainLiveText');
-            if (liveText) liveText.innerText = "Menyalakan Kamera Rekam...";
-
-            try {
-                trainNativeStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
-                });
-
-                const video = document.createElement('video');
-                video.srcObject = trainNativeStream;
-                video.setAttribute("playsinline", true);
-                video.muted = true;
-                await video.play();
-
-                const readerDiv = document.getElementById("trainReader");
-                readerDiv.innerHTML = "";
-                readerDiv.appendChild(video);
-                video.className = "w-full h-[220px] object-cover rounded-xl";
-
-                if (liveText) liveText.innerText = "Kamera Rekam Aktif";
-            } catch (err) {
-                if (liveText) liveText.innerText = "Gagal Buka Kamera";
-            }
-        }
-
-        function stopTrainScanner() {
-            stopRecordingSample();
-            if (trainNativeStream) {
-                trainNativeStream.getTracks().forEach(track => track.stop());
-                trainNativeStream = null;
-            }
-            const readerDiv = document.getElementById("trainReader");
-            if (readerDiv) readerDiv.innerHTML = "";
-            const liveText = document.getElementById('trainLiveText');
-            if (liveText) liveText.innerText = "Kamera Rekam Mati";
-        }
-
-        // FUNGSI REKAM SAMPEL AI
-        function startRecordingSample(e) {
-            if (e && e.cancelable) e.preventDefault();
-
-            const select = document.getElementById('trainProductSelect');
-            const targetId = select ? select.value : null;
-
-            if (!targetId) {
-                alert("Pilih barang atau [Latar Kosong] terlebih dahulu sebelum merekam!");
-                return;
-            }
-
-            const videoElement = document.querySelector("#trainReader video");
-            if (!videoElement || videoElement.readyState !== 4) {
-                alert("Nyalakan Kamera Rekam terlebih dahulu!");
-                return;
-            }
-
-            if (!mobilenetModel || !knnInstance) {
-                alert("Sistem AI Lokal sedang memuat, tunggu 5 detik lagi...");
-                return;
-            }
-
-            const recordBtn = document.getElementById('recordBtn');
-            recordBtn.innerHTML = `<i class="fa-solid fa-circle-dot animate-ping"></i> SEDANG MEREKAM SAMPEL...`;
-            recordBtn.classList.replace('from-purple-700', 'from-rose-600');
-            recordBtn.classList.replace('to-indigo-700', 'to-red-600');
-
-            if (recordInterval) clearInterval(recordInterval);
-
-            recordInterval = setInterval(() => {
-                try {
-                    const logits = mobilenetModel.infer(videoElement, true);
-                    knnInstance.addExample(logits, targetId);
-                    updateSampleCounterDisplay();
-                } catch (err) {
-                    console.error("Gagal rekam frame AI:", err);
-                }
-            }, 150);
-        }
-
-        function stopRecordingSample(e) {
-            if (e && e.cancelable) e.preventDefault();
-
-            if (recordInterval) {
-                clearInterval(recordInterval);
-                recordInterval = null;
-            }
-            const recordBtn = document.getElementById('recordBtn');
-            if (recordBtn) {
-                recordBtn.innerHTML = `<i class="fa-solid fa-camera font-bold text-base"></i> TAHAN UNTUK REKAM SAMPEL`;
-                recordBtn.classList.replace('from-rose-600', 'from-purple-700');
-                recordBtn.classList.replace('to-red-600', 'to-indigo-700');
-            }
-        }
-
-        function updateSampleCounterDisplay() {
-            const counter = document.getElementById('sampleCounterBadge');
-            const select = document.getElementById('trainProductSelect');
-            const targetId = select ? select.value : null;
-
-            if (knnInstance && counter) {
-                if (!targetId) {
-                    counter.innerText = "0 Sampel";
-                    return;
-                }
-                const exampleCount = knnInstance.getClassExampleCount();
-                const count = exampleCount[targetId] || 0;
-                counter.innerText = `${count} Sampel AI`;
-            }
-        }
-
-        function saveKnnDatasetToLocalStorage() {
-            if (!knnInstance || knnInstance.getNumClasses() === 0) {
-                alert("Belum ada sampel kemasan yang direkam!");
-                return;
-            }
-            const dataset = knnInstance.getClassifierDataset();
-            let datasetObj = {};
-            Object.keys(dataset).forEach((key) => {
-                let data = dataset[key].dataSync();
-                datasetObj[key] = Array.from(data);
-            });
-            localStorage.setItem("knn_store_dataset", JSON.stringify(datasetObj));
-            alert(" Memori AI tersimpan permanen di HP ini!");
-        }
-
-        function loadKnnDatasetFromLocalStorage() {
-            const dataStr = localStorage.getItem("knn_store_dataset");
-            if (!dataStr || !knnInstance) return;
-            try {
-                const datasetObj = JSON.parse(dataStr);
-                Object.keys(datasetObj).forEach((key) => {
-                    const tensor = tf.tensor2d(datasetObj[key], [datasetObj[key].length / 1024, 1024]);
-                    knnInstance.setClassifierDataset({ [key]: tensor });
-                });
-                updateSampleCounterDisplay();
-            } catch (e) { console.error("Gagal load hafalan AI:", e); }
-        }
-
-        function exportKnnDatasetToFile() {
-            if (!knnInstance || knnInstance.getNumClasses() === 0) {
-                alert("Belum ada memori AI yang direkam!");
-                return;
-            }
-            const dataset = knnInstance.getClassifierDataset();
-            let datasetObj = {};
-            Object.keys(dataset).forEach((key) => {
-                let data = dataset[key].dataSync();
-                datasetObj[key] = Array.from(data);
-            });
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(datasetObj));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `memori_ai_kasir_${Date.now()}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function importKnnDatasetFromFile(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const datasetObj = JSON.parse(e.target.result);
-                    if (!knnInstance) knnInstance = knnClassifier.create();
-                    Object.keys(datasetObj).forEach((key) => {
-                        const tensor = tf.tensor2d(datasetObj[key], [datasetObj[key].length / 1024, 1024]);
-                        knnInstance.setClassifierDataset({ [key]: tensor });
-                    });
-                    saveKnnDatasetToLocalStorage();
-                    updateSampleCounterDisplay();
-                    alert(" Berhasil! Memori AI produk telah di-impor!");
-                } catch(err) {
-                    alert(" File memori JSON tidak valid!");
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function clearKnnProductDataset() {
-            const select = document.getElementById('trainProductSelect');
-            const targetId = select ? select.value : null;
-            if (!targetId) {
-                alert("Pilih target terlebih dahulu di dropdown!");
-                return;
-            }
-            const targetName = (targetId === 'BACKGROUND_EMPTY') ? "Latar Belakang Kosong" : (products[targetId] ? products[targetId].name : targetId);
-            if (confirm(`Hapus sampel hafalan AI khusus untuk "${targetName}"?`)) {
-                if (knnInstance) {
-                    knnInstance.clearClass(targetId);
-                    saveKnnDatasetToLocalStorage();
-                    updateSampleCounterDisplay();
-                    alert(`Sampel AI untuk ${targetName} berhasil dibersihkan.`);
-                }
-            }
-        }
-
-        function clearKnnDataset() {
-            if (confirm("Hapus SEMUA memori hafalan kemasan AI di HP ini?")) {
-                localStorage.removeItem("knn_store_dataset");
-                if (knnInstance) knnInstance.clearAllClasses();
-                updateSampleCounterDisplay();
-                alert("Memori hafalan AI berhasil dibersihkan.");
-            }
-        }
-
-        // AKSI KLASIFIKASI AI INSTANT PENJUALAN KASIR (DENGAN LOCKING COOLDOWN)
-        async function predictLocalAIInstant(videoElement) {
-            const isToggleAI = document.getElementById('toggleAIInstant');
-            if (!isToggleAI || !isToggleAI.checked) return;
-
-            if (isLockingScan || !isKnnLoaded || !knnInstance || knnInstance.getNumClasses() === 0) return;
+        // FUNGSI MEMBACA TEKS (OCR) OTOMATIS & TAMPIL DI BAWAH KAMERA
+        async function runAutoOcr(videoElement) {
+            if (isOcrProcessing || isLockingScan || !videoElement || videoElement.readyState !== 4) return;
             
+            isOcrProcessing = true;
             try {
-                const logits = mobilenetModel.infer(videoElement, true);
-                const res = await knnInstance.predictClass(logits);
-                logits.dispose();
+                const canvas = document.createElement("canvas");
+                canvas.width = 480;
+                canvas.height = 360;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
-                const matchedId = res.label;
-                const confidence = res.confidences[matchedId] || 0;
-
-                // Abaikan jika melihat Latar Belakang Kosong
-                if (matchedId === 'BACKGROUND_EMPTY') return;
-
-                // Jika terdeteksi Kemasan Barang (Keyakinan >= 75%)
-                if (matchedId && products[matchedId] && confidence >= 0.75) {
-                    const now = Date.now();
-                    if (matchedId === lastScannedId && (now - lastScanTime) < 3000) return;
-
-                    isLockingScan = true;
-                    lastScannedId = matchedId;
-                    lastScanTime = now;
-
-                    showScanFeedback(true, ` Instant AI: ${products[matchedId].name}`);
-                    triggerVibration();
-                    addToCart(matchedId);
-
-                    // Kunci delay 2.5 detik agar tidak ter-scan terus-menerus
-                    setTimeout(() => { isLockingScan = false; }, 2500);
+                let text = "";
+                if (tesseractWorker) {
+                    const ret = await tesseractWorker.recognize(canvas);
+                    text = ret.data.text || "";
                 }
-            } catch (e) {
-                console.error("Error predict AI:", e);
+
+                const cleanedText = cleanAndFixText(text);
+                const liveText = document.getElementById('liveTextDisplay');
+
+                if (cleanedText && cleanedText.length >= 3) {
+                    // Tampilkan kata-kata yang terbaca di bawah kamera
+                    if (liveText && !isLockingScan) {
+                        liveText.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>  Terbaca: <b class="text-slate-800">"${cleanedText.substring(0, 30)}"</b>`;
+                    }
+                    // Coba cocokkan dengan daftar etalase
+                    matchAndAddToCart(cleanedText, false);
+                }
+            } catch (err) {
+                console.error("OCR Error:", err);
+            } finally {
+                isOcrProcessing = false;
+            }
+        }
+
+        function startOcrLoop(videoElement) {
+            stopOcrLoop();
+            ocrTimer = setInterval(() => {
+                runAutoOcr(videoElement);
+            }, 700); // OCR berjalan stabil setiap 700ms
+        }
+
+        function stopOcrLoop() {
+            if (ocrTimer) {
+                clearInterval(ocrTimer);
+                ocrTimer = null;
             }
         }
 
@@ -925,34 +583,29 @@
             clearCart();
         }
 
-        // LOGIKA SWITCH TAB HALAMAN (4 MENU UTAMA)
+        // LOGIKA SWITCH TAB HALAMAN (3 MENU UTAMA)
         function switchTab(tabName) {
             const pageKasir = document.getElementById('pageKasir');
             const pageAturBarang = document.getElementById('pageAturBarang');
             const pageKalkulator = document.getElementById('pageKalkulator');
-            const pagePelatihan = document.getElementById('pagePelatihan');
 
             const btnKasir = document.getElementById('tabKasirBtn');
             const btnAtur = document.getElementById('tabAturBtn');
             const btnKalkulator = document.getElementById('tabKalkulatorBtn');
-            const btnPelatihan = document.getElementById('tabPelatihanBtn');
 
-            const activeBtnClass = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-white shadow-sm flex items-center gap-1.5";
-            const inactiveBtnClass = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5";
+            const activeBtnClass = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-white shadow-sm flex items-center gap-1.5";
+            const inactiveBtnClass = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5";
 
             stopScanner();
             stopAturScanner();
-            stopTrainScanner();
 
             pageKasir.classList.add('hidden');
             pageAturBarang.classList.add('hidden');
             pageKalkulator.classList.add('hidden');
-            pagePelatihan.classList.add('hidden');
 
             btnKasir.className = inactiveBtnClass;
             btnAtur.className = inactiveBtnClass;
             btnKalkulator.className = inactiveBtnClass;
-            btnPelatihan.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-purple-700 bg-purple-100/70 hover:bg-purple-200 flex items-center gap-1.5";
 
             if (tabName === 'kasir') {
                 pageKasir.classList.remove('hidden');
@@ -963,10 +616,6 @@
             } else if (tabName === 'kalkulator') {
                 pageKalkulator.classList.remove('hidden');
                 btnKalkulator.className = activeBtnClass + " bg-purple-600";
-            } else if (tabName === 'pelatihan') {
-                pagePelatihan.classList.remove('hidden');
-                btnPelatihan.className = activeBtnClass + " bg-purple-700";
-                populateTrainProductSelect();
             }
         }
 
@@ -1091,7 +740,6 @@
         async function startScanner() {
             stopScanner();
             stopAturScanner();
-            stopTrainScanner();
             const liveText = document.getElementById('liveTextDisplay');
             if (liveText) liveText.innerText = " Menyalakan Kamera Kasir...";
 
@@ -1116,7 +764,9 @@
                     readerDiv.appendChild(video);
                     video.className = "w-full h-[190px] object-cover rounded-xl";
 
-                    if (liveText) liveText.innerText = " Scan Kilat Barcode & On-Device AI Aktif";
+                    if (liveText) liveText.innerText = " Scan Barcode & OCR Teks Aktif";
+
+                    startOcrLoop(video); // Jalankan OCR otomatis
 
                     async function renderFrame() {
                         if (!nativeStream || !nativeStream.active) return;
@@ -1124,8 +774,6 @@
                             const barcodes = await barcodeDetector.detect(video);
                             if (barcodes.length > 0) {
                                 handleDetectedKey(barcodes[0].rawValue);
-                            } else {
-                                predictLocalAIInstant(video);
                             }
                         } catch (e) {}
                         nativeAnimFrame = requestAnimationFrame(renderFrame);
@@ -1143,10 +791,13 @@
                 () => {}
             ).then(() => {
                 if (liveText) liveText.innerText = " Kamera Aktif (Mode Standard 30 FPS)";
+                const vElement = document.querySelector("#reader video");
+                if (vElement) startOcrLoop(vElement);
             });
         }
 
         function stopScanner() {
+            stopOcrLoop();
             if (nativeAnimFrame) { cancelAnimationFrame(nativeAnimFrame); nativeAnimFrame = null; }
             if (nativeStream) { nativeStream.getTracks().forEach(track => track.stop()); nativeStream = null; }
             if (html5QrCode && html5QrCode.isScanning) {
@@ -1324,7 +975,6 @@
                 const data = await response.json();
                 products = data || {};
                 renderEtalase();
-                populateTrainProductSelect();
                 if (liveText) liveText.innerText = " Etalase Google Sheets siap!";
             } catch (err) {
                 if (liveText) liveText.innerText = " Gagal terhubung ke Google Sheets.";
@@ -1358,7 +1008,6 @@
                 if (liveText) liveText.innerText = " Barang berhasil dihapus!";
                 delete products[id];
                 renderEtalase();
-                populateTrainProductSelect();
                 await loadProductsFromSheets();
             } catch (err) { alert("Gagal menghapus dari Google Sheets."); }
         }
@@ -1659,8 +1308,9 @@
         }
 
         function matchAndAddToCart(inputText, isExplicitAction = false) {
+            if (isLockingScan) return;
             const cleanInput = cleanAndFixText(inputText);
-            if (cleanInput.length < 2) return;
+            if (cleanInput.length < 3) return;
             let matchedIds = [];
 
             for (let id in products) {
@@ -1685,17 +1335,17 @@
 
             if (matchedIds.length === 1) {
                 const matchedId = matchedIds[0];
-                showScanFeedback(true, products[matchedId].name); triggerVibration(); addToCart(matchedId);
-            } else if (matchedIds.length > 1) {
+                isLockingScan = true;
+                showScanFeedback(true, products[matchedId].name); 
+                triggerVibration(); 
+                addToCart(matchedId);
+                setTimeout(() => { isLockingScan = false; }, 2500);
+            } else if (matchedIds.length > 1 && isExplicitAction) {
                 document.getElementById('manualSearchInput').value = inputText.trim();
                 filterManualSearch();
                 document.getElementById('liveTextDisplay').innerText = ` Pilih varian untuk "${inputText}" di bawah`;
                 triggerVibration();
             } else if (isExplicitAction) showScanFeedback(false, `Tidak Ditemukan`);
-            else {
-                const now = Date.now();
-                if (now - lastFailTime > 2500) { lastFailTime = now; showScanFeedback(false, "Tidak Ditemukan"); }
-            }
         }
 
         function handleDetectedKey(key) {
@@ -1746,7 +1396,7 @@
                     <div class="text-center py-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                         <span class="text-2xl block mb-1 text-slate-400"><i class="fa-solid fa-cart-arrow-down"></i></span>
                         <p class="text-slate-400 font-medium">Keranjang masih kosong</p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">Scan barcode kilat, AI Live, sebut nama (mic), atau cari manual.</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Scan barcode kilat, OCR teks, sebut nama (mic), atau cari manual.</p>
                     </div>
                 `;
             } else {
@@ -1931,7 +1581,7 @@
         // INIT EXECUTION
         renderCart();
         loadProductsFromSheets();
-        initLocalAI();
+        initOcrWorker();
     </script>
 </body>
 </html>
