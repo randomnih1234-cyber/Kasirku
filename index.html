@@ -94,10 +94,10 @@
             </div>
         </header>
 
-        <!-- TAB 1: HALAMAN KASIR & CEK HARGA (SCANNER + KERANJANG SAJA) -->
+        <!-- TAB 1: HALAMAN KASIR & CEK HARGA (MURNI SCANNER + KERANJANG) -->
         <div id="pageKasir" class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-            <!-- LEFT COLUMN: SCANNER -->
+            <!-- LEFT COLUMN: SCANNER PENJUALAN -->
             <div class="lg:col-span-6 space-y-4">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 relative">
                     <div class="flex items-center justify-between mb-3">
@@ -211,7 +211,7 @@
 
         </div>
 
-        <!-- TAB 2: MENU BARU ATUR BARANG / EDIT ETALASE -->
+        <!-- TAB 2: MENU ATUR BARANG / EDIT ETALASE -->
         <div id="pageAturBarang" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-4">
             
             <!-- LEFT COLUMN: SCANNER INPUT BARCODE & FORM TAMBAH/EDIT -->
@@ -1614,6 +1614,7 @@
             }
         }
 
+        // AKSI PENANGANAN HASIL SCAN PADA PENJUALAN KASIR
         function handleDetectedKey(key) {
             if (isLockingScan) return;
             const now = Date.now();
@@ -1627,11 +1628,11 @@
                 showScanFeedback(true, products[matchedId].name); triggerVibration(); addToCart(matchedId);
                 setTimeout(() => { isLockingScan = false; }, 2000);
             } else {
-                document.getElementById('barcodeInput').value = key;
-                showScanFeedback(false, "Barcode Baru! Pilih Buat / Tautkan"); triggerVibration();
-                switchTab('atur');
-                setStorageMode('LINK');
-                document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
+                // TETAP DI HALAMAN KASIR: HANYA TAMPILKAN NOTIFIKASI TANPA berpindah TAB
+                showScanFeedback(false, `Barcode Belum Ada`);
+                triggerVibration();
+                const liveText = document.getElementById('liveTextDisplay');
+                if (liveText) liveText.innerText = `❌ Barcode "${key}" belum terdaftar!`;
             }
         }
 
