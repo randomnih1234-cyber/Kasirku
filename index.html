@@ -42,7 +42,7 @@
             box-shadow: 0 0 12px #10b981;
             animation: scan-line 1.8s ease-in-out infinite alternate;
         }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
@@ -53,7 +53,40 @@
         }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen p-3 sm:p-5 antialiased selection:bg-emerald-500 selection:text-white">
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen p-3 sm:p-5 antialiased selection:bg-emerald-500 selection:text-white relative">
+
+    <button onclick="toggleEtalaseDrawer()" class="fixed right-0 top-1/3 z-40 bg-gradient-to-b from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white py-3 px-2 rounded-l-2xl shadow-xl hover:px-3 transition-all duration-200 flex flex-col items-center gap-1.5 border-l-2 border-y border-amber-300">
+        <i class="fa-solid fa-grip text-base"></i>
+        <span class="text-[10px] font-extrabold tracking-wider [writing-mode:vertical-lr] rotate-180 uppercase">Etalase</span>
+    </button>
+
+    <div id="drawerBackdrop" onclick="toggleEtalaseDrawer()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 hidden transition-opacity"></div>
+
+    <div id="etalaseDrawer" class="fixed inset-y-0 right-0 z-50 w-full max-w-xs sm:max-w-sm bg-white shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col border-l border-slate-200">
+        <div class="p-4 bg-slate-900 text-white flex justify-between items-center shadow-md shrink-0">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-grip text-amber-400 text-lg"></i>
+                <h2 class="font-extrabold text-sm tracking-wide">Etalase Barang</h2>
+            </div>
+            <button onclick="toggleEtalaseDrawer()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-300 transition">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+        </div>
+
+        <div class="p-3 bg-slate-50 border-b border-slate-200 shrink-0">
+            <input type="text" id="drawerSearchInput" onkeyup="renderEtalaseGrid()" placeholder="Cari barang..." class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 font-medium text-slate-700">
+        </div>
+
+        <div class="relative flex-1 overflow-hidden flex">
+            <div id="letterPopupBubble" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white/95 backdrop-blur-md border-2 border-amber-500 rounded-2xl shadow-2xl flex items-center justify-center text-3xl font-extrabold text-amber-600 pointer-events-none transition-all duration-150 opacity-0 scale-75 z-50">
+                <span id="letterPopupText">A</span>
+            </div>
+
+            <div id="gridProductList" class="flex-1 overflow-y-auto p-3 pr-2 grid grid-cols-3 gap-2.5"></div>
+
+            <div id="alphabetIndexBar" class="w-6 py-2 bg-slate-50 border-l border-slate-200/80 flex flex-col items-center justify-between text-[9px] font-bold text-slate-400 select-none shrink-0 overflow-y-auto no-select touch-none"></div>
+        </div>
+    </div>
 
     <div class="max-w-4xl mx-auto space-y-4">
         
@@ -80,9 +113,6 @@
                 </button>
                 <button id="tabKalkulatorBtn" onclick="switchTab('kalkulator')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
                     <i class="fa-solid fa-calculator"></i> Kalkulator Modal
-                </button>
-                <button id="tabEtalaseGridBtn" onclick="switchTab('etalaseGrid')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
-                    <i class="fa-solid fa-grip"></i> Menu Etalase
                 </button>
             </div>
         </header>
@@ -385,26 +415,6 @@
             </div>
         </div>
 
-        <!-- MENU ETALASE ALA APLIKASI HP -->
-        <div id="pageEtalaseGrid" class="hidden bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-lg">
-                        <i class="fa-solid fa-grip"></i>
-                    </div>
-                    <div>
-                        <h2 class="text-sm font-bold text-slate-800">Etalase Barang (Tampilan Aplikasi)</h2>
-                        <p class="text-[11px] text-slate-400">Klik barang untuk memasukkannya ke keranjang belanja kasir</p>
-                    </div>
-                </div>
-                <div class="relative w-full sm:w-64">
-                    <input type="text" id="gridSearchInput" onkeyup="renderEtalaseGrid()" placeholder="Cari barang di etalase..." class="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-amber-500/20 transition font-medium">
-                </div>
-            </div>
-
-            <div id="gridProductList" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3 sm:gap-4 max-h-[70vh] overflow-y-auto p-1"></div>
-        </div>
-
     </div>
 
     <script>
@@ -433,6 +443,130 @@
         let failTimer = null;
 
         let tesseractWorker = null;
+        let popupTimer = null;
+        let lastScrolledChar = "";
+
+        function toggleEtalaseDrawer() {
+            const drawer = document.getElementById('etalaseDrawer');
+            const backdrop = document.getElementById('drawerBackdrop');
+            if (drawer.classList.contains('translate-x-full')) {
+                drawer.classList.remove('translate-x-full');
+                backdrop.classList.remove('hidden');
+                buildAlphabetIndex();
+                renderEtalaseGrid();
+            } else {
+                drawer.classList.add('translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+        }
+
+        function buildAlphabetIndex() {
+            const bar = document.getElementById('alphabetIndexBar');
+            if (!bar) return;
+            bar.innerHTML = '';
+            const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split("");
+            letters.forEach(char => {
+                const btn = document.createElement('span');
+                btn.setAttribute('data-letter', char);
+                btn.className = "cursor-pointer hover:text-amber-600 hover:font-black transition-colors px-1 py-[1px]";
+                btn.innerText = char;
+                bar.appendChild(btn);
+            });
+
+            setupAlphabetDrag(bar);
+        }
+
+        function setupAlphabetDrag(bar) {
+            let isDragging = false;
+
+            function handleDrag(e) {
+                const rect = bar.getBoundingClientRect();
+                let clientY = e.clientY;
+                if (e.touches && e.touches.length > 0) {
+                    clientY = e.touches[0].clientY;
+                }
+
+                let relativeY = clientY - rect.top;
+                let clampedY = Math.max(0, Math.min(relativeY, rect.height - 1));
+
+                const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split("");
+                const index = Math.floor((clampedY / rect.height) * letters.length);
+                const char = letters[Math.min(index, letters.length - 1)];
+
+                if (char && char !== lastScrolledChar) {
+                    lastScrolledChar = char;
+                    scrollToLetter(char, true);
+                }
+            }
+
+            // Event Touch untuk Geser / Drag Jari di HP
+            bar.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                lastScrolledChar = "";
+                handleDrag(e);
+            }, { passive: true });
+
+            bar.addEventListener('touchmove', (e) => {
+                if (isDragging) {
+                    handleDrag(e);
+                }
+            }, { passive: true });
+
+            bar.addEventListener('touchend', () => {
+                isDragging = false;
+                hideLetterPopup();
+            });
+
+            // Event Mouse untuk Drag / Klik di Laptop & Desktop
+            bar.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastScrolledChar = "";
+                handleDrag(e);
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    handleDrag(e);
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    hideLetterPopup();
+                }
+            });
+        }
+
+        function scrollToLetter(char, showPopup = true) {
+            const target = document.getElementById(`letter-group-${char}`);
+            if (target) {
+                target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }
+
+            if (showPopup) {
+                const popup = document.getElementById('letterPopupBubble');
+                const popupText = document.getElementById('letterPopupText');
+                if (popup && popupText) {
+                    popupText.innerText = char;
+                    popup.classList.remove('opacity-0', 'scale-75');
+                    popup.classList.add('opacity-100', 'scale-100');
+
+                    if (popupTimer) clearTimeout(popupTimer);
+                    popupTimer = setTimeout(() => {
+                        hideLetterPopup();
+                    }, 600);
+                }
+            }
+        }
+
+        function hideLetterPopup() {
+            const popup = document.getElementById('letterPopupBubble');
+            if (popup) {
+                popup.classList.remove('opacity-100', 'scale-100');
+                popup.classList.add('opacity-0', 'scale-75');
+            }
+        }
 
         async function initOcrWorker() {
             try {
@@ -544,7 +678,7 @@
                 }
             } catch (err) {
                 console.error("OCR Error:", err);
-            } font-bold {
+            } finally {
                 isOcrProcessing = false;
             }
         }
@@ -604,12 +738,10 @@
             const pageKasir = document.getElementById('pageKasir');
             const pageAturBarang = document.getElementById('pageAturBarang');
             const pageKalkulator = document.getElementById('pageKalkulator');
-            const pageEtalaseGrid = document.getElementById('pageEtalaseGrid');
 
             const btnKasir = document.getElementById('tabKasirBtn');
             const btnAtur = document.getElementById('tabAturBtn');
             const btnKalkulator = document.getElementById('tabKalkulatorBtn');
-            const btnEtalaseGrid = document.getElementById('tabEtalaseGridBtn');
 
             const activeBtnClass = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-white shadow-sm flex items-center gap-1.5";
             const inactiveBtnClass = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5";
@@ -620,12 +752,10 @@
             pageKasir.classList.add('hidden');
             pageAturBarang.classList.add('hidden');
             pageKalkulator.classList.add('hidden');
-            pageEtalaseGrid.classList.add('hidden');
 
             btnKasir.className = inactiveBtnClass;
             btnAtur.className = inactiveBtnClass;
             btnKalkulator.className = inactiveBtnClass;
-            btnEtalaseGrid.className = inactiveBtnClass;
 
             if (tabName === 'kasir') {
                 pageKasir.classList.remove('hidden');
@@ -636,10 +766,6 @@
             } else if (tabName === 'kalkulator') {
                 pageKalkulator.classList.remove('hidden');
                 btnKalkulator.className = activeBtnClass + " bg-purple-600";
-            } else if (tabName === 'etalaseGrid') {
-                pageEtalaseGrid.classList.remove('hidden');
-                btnEtalaseGrid.className = activeBtnClass + " bg-amber-600";
-                renderEtalaseGrid();
             }
         }
 
@@ -1444,20 +1570,27 @@
             calculateChange();
         }
 
-        // TAMPILAN ETALASE ALAMAT GRID ALA APLIKASI HP
+        // GRID TAMPILAN PADAT TERDAPAT PENANDA ANCHOR PADA BARANG PERTAMA TIAP ABJAD
         function renderEtalaseGrid() {
             const gridDiv = document.getElementById('gridProductList');
-            const searchInput = document.getElementById('gridSearchInput');
+            const searchInput = document.getElementById('drawerSearchInput');
             const searchQuery = searchInput ? cleanAndFixText(searchInput.value) : "";
             const ids = Object.keys(products);
 
             gridDiv.innerHTML = '';
 
-            const filteredIds = ids.filter(id => {
+            let filteredIds = ids.filter(id => {
                 const item = products[id];
                 const bStr = (item.barcodes || []).join(" ");
                 const fullText = cleanAndFixText(item.name + " " + bStr);
                 return fullText.includes(searchQuery);
+            });
+
+            // Urutkan A-Z secara presisi
+            filteredIds.sort((a, b) => {
+                const nameA = (products[a].name || "").trim().toUpperCase();
+                const nameB = (products[b].name || "").trim().toUpperCase();
+                return nameA.localeCompare(nameB, 'id', { sensitivity: 'base' });
             });
 
             if (filteredIds.length === 0) {
@@ -1465,11 +1598,25 @@
                 return;
             }
 
+            let currentLetter = "";
+
             filteredIds.forEach(id => {
                 const item = products[id];
+                const nameTrimmed = (item.name || "").trim().toUpperCase();
+                let firstChar = nameTrimmed.charAt(0);
+                if (!/[A-Z]/.test(firstChar)) {
+                    firstChar = "#";
+                }
+
                 const card = document.createElement('div');
-                card.className = "flex flex-col items-center cursor-pointer group active:scale-95 transition-all no-select p-2 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-200/60";
-                
+                card.className = "flex flex-col items-center cursor-pointer group active:scale-95 transition-all no-select p-2 rounded-2xl hover:bg-amber-50/60 border border-slate-100 hover:border-amber-200";
+
+                // Memasang ID navigasi pada item pertama tiap kelompok abjad tanpa merusak susunan 3 kolom
+                if (firstChar !== currentLetter) {
+                    currentLetter = firstChar;
+                    card.id = `letter-group-${currentLetter}`;
+                }
+
                 card.onclick = () => {
                     addToCart(id);
                     showScanFeedback(true, item.name);
@@ -1478,17 +1625,17 @@
 
                 let imgHtml = '';
                 if (item.image && item.image.trim() !== "") {
-                    imgHtml = `<img src="${item.image}" alt="${item.name}" class="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-2xl shadow-sm border border-slate-200/80 group-hover:shadow-md transition">`;
+                    imgHtml = `<img src="${item.image}" alt="${item.name}" class="w-12 h-12 object-cover rounded-2xl shadow-xs border border-slate-200 group-hover:shadow-md transition">`;
                 } else {
-                    imgHtml = `<div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white text-xl shadow-sm border border-slate-200/80 group-hover:shadow-md transition"><i class="fa-solid fa-box"></i></div>`;
+                    imgHtml = `<div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 flex items-center justify-center text-white text-lg shadow-xs border border-amber-300 group-hover:shadow-md transition"><i class="fa-solid fa-box"></i></div>`;
                 }
 
                 card.innerHTML = `
-                    <div class="relative mb-1.5">
+                    <div class="relative mb-1">
                         ${imgHtml}
                     </div>
-                    <span class="text-[11px] font-bold text-slate-800 text-center line-clamp-2 leading-tight w-full px-0.5">${item.name}</span>
-                    <span class="text-[10px] font-extrabold text-emerald-600 mt-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">${formatRupiah(item.price)}</span>
+                    <span class="text-[11px] font-bold text-slate-800 text-center line-clamp-2 leading-tight w-full">${item.name}</span>
+                    <span class="text-[10px] font-extrabold text-amber-700 mt-1 bg-amber-100/70 px-1.5 py-0.5 rounded-md">${formatRupiah(item.price)}</span>
                 `;
                 gridDiv.appendChild(card);
             });
